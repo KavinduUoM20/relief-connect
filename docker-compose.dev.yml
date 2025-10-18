@@ -21,6 +21,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://dev-api.pasindusampath.com
     container_name: nx-web-dev
     network_mode: "host"
     env_file:

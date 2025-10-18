@@ -21,6 +21,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://staging-api.pasindusampath.com
     container_name: nx-web-staging
     network_mode: "host"
     env_file:
