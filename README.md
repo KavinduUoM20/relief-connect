@@ -30,7 +30,10 @@ nx-mono-repo-deployment-test/
 ├── .github/
 │   └── workflows/              # CI/CD pipelines
 │       ├── ci.yml              # Continuous Integration
-│       ├── cd.yml              # Continuous Deployment
+│       ├── cd-dev.yml          # Dev deployment (auto)
+│       ├── cd-qa.yml           # QA deployment (auto)
+│       ├── cd-staging.yml      # Staging deployment (auto)
+│       ├── cd-prod.yml         # Production deployment (manual)
 │       └── pr-check.yml        # Pull Request checks
 │
 ├── docker/
@@ -62,6 +65,35 @@ nx-mono-repo-deployment-test/
 - 📊 **Health Checks**: Built-in health monitoring
 - 🔄 **Auto Deployment**: Push to main branch triggers deployment
 - 📦 **Shared Libraries**: Common utilities and types across apps
+
+## 🌍 Live Environments
+
+The application is deployed across multiple environments with automated CI/CD pipelines:
+
+### Development Environment
+- **API**: https://dev-api.pasindusampath.com
+- **Web**: https://dev-web.pasindusampath.com
+- **Status**: ✅ Auto-deploy on `develop`/`dev` branch
+- **Health Check**: https://dev-api.pasindusampath.com/health
+
+### QA Environment
+- **API**: https://qa-api.pasindusampath.com
+- **Web**: https://qa-web.pasindusampath.com
+- **Status**: ✅ Auto-deploy on `qa` branch
+- **Health Check**: https://qa-api.pasindusampath.com/health
+
+### Staging Environment
+- **API**: https://staging-api.pasindusampath.com
+- **Web**: https://staging-web.pasindusampath.com
+- **Status**: ✅ Auto-deploy on `staging` branch
+- **Health Check**: https://staging-api.pasindusampath.com/health
+
+### Production Environment
+- **API**: https://prod-api.pasindusampath.com
+- **Web**: https://prod-web.pasindusampath.com
+- **Status**: ⚠️ Manual deployment only (main branch)
+- **Health Check**: https://prod-api.pasindusampath.com/health
+
 
 ## 🚀 Quick Start
 

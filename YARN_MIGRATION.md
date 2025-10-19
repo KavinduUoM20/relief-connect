@@ -33,7 +33,7 @@ Your NX Monorepo has been successfully migrated from npm to **Yarn 4 with Worksp
 
 **CI/CD:**
 - ✅ `.github/workflows/ci.yml` - Yarn commands
-- ✅ `.github/workflows/cd.yml` - Yarn environment
+- ✅ `.github/workflows/cd-*.yml` - Multi-environment deployments with Yarn
 - ✅ `.github/workflows/pr-check.yml` - Yarn commands
 
 **Documentation:**

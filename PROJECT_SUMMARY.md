@@ -89,14 +89,19 @@ This document provides a comprehensive overview of the entire project structure 
    - Tests Docker builds
    - Matrix testing (Node 18.x)
 
-2. **cd.yml** - Continuous Deployment
-   - Runs on push to main
+2. **cd-dev.yml, cd-qa.yml, cd-staging.yml** - Environment Deployments
+   - Auto-deploy on respective branches
    - Builds Docker images
    - Deploys to VPS via SSH
    - Runs health checks
    - Auto cleanup
 
-3. **pr-check.yml** - Pull Request Validation
+3. **cd-prod.yml** - Production Deployment
+   - Manual deployment only
+   - Main branch kept independent
+   - Production requires manual trigger
+
+4. **pr-check.yml** - Pull Request Validation
    - Validates PRs
    - Checks formatting
    - Runs linting
