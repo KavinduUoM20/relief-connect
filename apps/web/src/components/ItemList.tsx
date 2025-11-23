@@ -1,14 +1,9 @@
 import React from 'react';
+import { ItemResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/item/response/item_response_dto';
 import styles from '../styles/ItemList.module.css';
 
-interface Item {
-  id: number;
-  name: string;
-  description?: string;
-}
-
 interface ItemListProps {
-  items: Item[];
+  items: ItemResponseDto[];
 }
 
 export default function ItemList({ items }: ItemListProps) {

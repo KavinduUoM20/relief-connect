@@ -12,7 +12,7 @@
   "parserOptions": {
     "ecmaVersion": 2020,
     "sourceType": "module",
-    "project": "./tsconfig.json"
+    "project": "apps/api/tsconfig.json"
   },
   "rules": {
     "@typescript-eslint/explicit-function-return-type": "off",

@@ -2,34 +2,27 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import ItemList from '../components/ItemList';
 import AddItemForm from '../components/AddItemForm';
+import { itemService } from '../services';
+import { ItemResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/item/response/item_response_dto';
+import { CreateItemDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/item/request/create_item_dto';
 import styles from '../styles/Home.module.css';
 
-interface Item {
-  id: number;
-  name: string;
-  description: string;
-}
-
-interface ApiResponse {
-  success: boolean;
-  data: Item[];
-  count: number;
-}
-
 export default function Home() {
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<ItemResponseDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
   const fetchItems = async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await fetch(`${apiUrl}/api/items`);
-      const data: ApiResponse = await response.json();
-      setItems(data.data || []);
       setError(null);
+      const response = await itemService.getAllItems();
+      
+      if (response.success && response.data) {
+        setItems(response.data);
+      } else {
+        setError(response.error || 'Failed to fetch items');
+      }
     } catch (err) {
       setError('Failed to fetch items');
       console.error(err);
@@ -44,16 +37,13 @@ export default function Home() {
 
   const handleAddItem = async (name: string, description: string): Promise<void> => {
     try {
-      const response = await fetch(`${apiUrl}/api/items`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, description }),
-      });
-      const data = await response.json();
-      if (data.success) {
+      const createItemDto = new CreateItemDto({ name, description });
+      const response = await itemService.createItem(createItemDto);
+      
+      if (response.success) {
         await fetchItems();
+      } else {
+        console.error('Failed to add item:', response.error);
       }
     } catch (err) {
       console.error('Failed to add item:', err);
