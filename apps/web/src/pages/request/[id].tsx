@@ -25,7 +25,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
-import { Urgency, HelpRequestCategory } from '@nx-mono-repo-deployment-test/shared/src/enums'
+import { Urgency, ContactType } from '@nx-mono-repo-deployment-test/shared/src/enums'
 
 interface DonationRequest {
   id: number
@@ -89,9 +89,7 @@ export default function RequestDetailsPage() {
   const [donationRequests, setDonationRequests] = useState<DonationRequest[]>(() => {
     // Load donation statuses from localStorage
     if (typeof window !== 'undefined') {
-      const donationStatuses = JSON.parse(
-        localStorage.getItem('donation_statuses') || '{}'
-      )
+      const donationStatuses = JSON.parse(localStorage.getItem('donation_statuses') || '{}')
       return dummyDonationRequests.map((donation) => ({
         ...donation,
         status: (donationStatuses[donation.id] as DonationRequest['status']) || donation.status,
@@ -128,7 +126,6 @@ export default function RequestDetailsPage() {
           id: Number(id),
           lat: 6.9271,
           lng: 79.8612,
-          category: HelpRequestCategory.FOOD_WATER,
           urgency: Urgency.HIGH,
           shortNote:
             'Name: John Doe, People: 5, Kids: 2, Elders: 2. Items: Food & Water (3), Torch (2), Medicine (1)',
@@ -152,12 +149,10 @@ export default function RequestDetailsPage() {
       donation.id === donationId ? { ...donation, status: 'confirmed' as const } : donation
     )
     setDonationRequests(updated)
-    
+
     // Store in localStorage to sync with my-requests page
     if (typeof window !== 'undefined') {
-      const donationStatuses = JSON.parse(
-        localStorage.getItem('donation_statuses') || '{}'
-      )
+      const donationStatuses = JSON.parse(localStorage.getItem('donation_statuses') || '{}')
       donationStatuses[donationId] = 'confirmed'
       localStorage.setItem('donation_statuses', JSON.stringify(donationStatuses))
     }
@@ -175,8 +170,7 @@ export default function RequestDetailsPage() {
       pathname: '/donate',
       query: {
         requestId: request.id,
-        userName: name,
-        category: request.category,
+        userName: requestName,
         urgency: request.urgency,
         items: request.shortNote?.match(/Items:\s*(.+)/)?.[1] || '',
         location: request.approxArea || '',
@@ -302,9 +296,7 @@ export default function RequestDetailsPage() {
                   <Users className="h-5 w-5 text-blue-600" />
                   <span className="font-semibold">{peopleCount} people</span>
                 </div>
-                {kidsCount > 0 && (
-                  <span className="text-sm text-gray-600">({kidsCount} kids)</span>
-                )}
+                {kidsCount > 0 && <span className="text-sm text-gray-600">({kidsCount} kids)</span>}
                 {eldersCount > 0 && (
                   <span className="text-sm text-gray-600">({eldersCount} elders)</span>
                 )}
@@ -317,12 +309,6 @@ export default function RequestDetailsPage() {
                   <span className="font-semibold">Items Needed</span>
                 </div>
                 <p className="text-gray-700 ml-7">{items}</p>
-              </div>
-
-              {/* Category */}
-              <div>
-                <span className="text-sm font-semibold text-gray-600">Category:</span>{' '}
-                <span className="text-gray-700">{request.category || 'General'}</span>
               </div>
 
               {/* Contact Info */}
@@ -347,8 +333,8 @@ export default function RequestDetailsPage() {
               {/* Coordinates */}
               {request.lat && request.lng && (
                 <div className="text-sm text-gray-600">
-                  <span className="font-semibold">Coordinates:</span> Lat:{' '}
-                  {request.lat.toFixed(4)}, Lng: {request.lng.toFixed(4)}
+                  <span className="font-semibold">Coordinates:</span> Lat: {request.lat.toFixed(4)},
+                  Lng: {request.lng.toFixed(4)}
                 </div>
               )}
             </CardContent>
@@ -381,9 +367,7 @@ export default function RequestDetailsPage() {
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-2xl">Donation Requests</DialogTitle>
-                  <DialogDescription>
-                    People who want to donate to this request
-                  </DialogDescription>
+                  <DialogDescription>People who want to donate to this request</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 mt-4">
                   {dummyDonationRequests.length === 0 ? (
@@ -430,7 +414,9 @@ export default function RequestDetailsPage() {
                             </div>
                             {donation.message && (
                               <div>
-                                <span className="text-sm font-semibold text-gray-600">Message:</span>
+                                <span className="text-sm font-semibold text-gray-600">
+                                  Message:
+                                </span>
                                 <p className="text-gray-700 mt-1">{donation.message}</p>
                               </div>
                             )}
@@ -487,4 +473,3 @@ export default function RequestDetailsPage() {
     </>
   )
 }
-

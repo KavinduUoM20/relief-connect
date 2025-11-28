@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest';
 import {
-  HelpRequestCategory,
   Urgency,
   ContactType,
 } from '@nx-mono-repo-deployment-test/shared/src/enums';
@@ -17,7 +16,6 @@ interface HelpRequestFormProps {
 const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel }) => {
   const { t } = useTranslation('common');
   const [formData, setFormData] = useState<Partial<ICreateHelpRequest>>({
-    category: HelpRequestCategory.FOOD_WATER,
     urgency: Urgency.MEDIUM,
     contactType: ContactType.NONE,
     shortNote: '',
@@ -67,24 +65,6 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <h2>{t('iNeedHelp')}</h2>
-
-      <div className={styles.formGroup}>
-        <label htmlFor="category">{t('category')} *</label>
-        <select
-          id="category"
-          value={formData.category}
-          onChange={(e) =>
-            setFormData({ ...formData, category: e.target.value as HelpRequestCategory })
-          }
-          required
-        >
-          {Object.values(HelpRequestCategory).map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <div className={styles.formGroup}>
         <label htmlFor="urgency">{t('urgency')} *</label>

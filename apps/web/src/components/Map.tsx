@@ -80,9 +80,6 @@ const Map: React.FC<MapProps> = ({
               <div className={styles.popup}>
                 <h4>Help Request</h4>
                 <p>
-                  <strong>Category:</strong> {request.category}
-                </p>
-                <p>
                   <strong>Urgency:</strong> {request.urgency}
                 </p>
                 <p>

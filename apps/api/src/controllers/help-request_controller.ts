@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { HelpRequestService } from '../services';
 import { CreateHelpRequestDto } from '@nx-mono-repo-deployment-test/shared/src/dtos';
-import { HelpRequestCategory, Urgency } from '@nx-mono-repo-deployment-test/shared/src/enums';
+import { Urgency } from '@nx-mono-repo-deployment-test/shared/src/enums';
 
 /**
  * Controller for HelpRequest endpoints
@@ -18,20 +18,16 @@ class HelpRequestController {
   /**
    * GET /api/help-requests
    * Get all help requests with optional filters
-   * Query params: category, urgency, district
+   * Query params: urgency, district
    */
   getHelpRequests = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const filters: {
-        category?: HelpRequestCategory;
         urgency?: Urgency;
         district?: string;
       } = {};
 
       // Parse query parameters
-      if (req.query.category) {
-        filters.category = req.query.category as HelpRequestCategory;
-      }
       if (req.query.urgency) {
         filters.urgency = req.query.urgency as Urgency;
       }

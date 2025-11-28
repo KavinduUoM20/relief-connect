@@ -6,7 +6,7 @@ import { useRouter } from "next/router"
 import { Button } from "apps/web/src/components/ui/button"
 import { Label } from "apps/web/src/components/ui/label"
 import { Phone, Heart, MessageSquare, ArrowLeft, MapPin, AlertCircle, Users, Package } from "lucide-react"
-import { Urgency, HelpRequestCategory, ContactType } from "@nx-mono-repo-deployment-test/shared/src/enums"
+import { Urgency, ContactType } from "@nx-mono-repo-deployment-test/shared/src/enums"
 import type { HelpRequestResponseDto } from "@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto"
 
 export default function RequestDetailsPage() {
@@ -97,19 +97,6 @@ export default function RequestDetailsPage() {
                       <MapPin className="h-4 w-4 text-blue-600" />
                       <p className="text-base font-semibold text-gray-900">{request.approxArea}</p>
                     </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Category</Label>
-                    <p className="text-base font-semibold text-gray-900 mt-1">
-                      {request.category === HelpRequestCategory.FOOD_WATER
-                        ? "Food & Water"
-                        : request.category === HelpRequestCategory.MEDICAL
-                          ? "Medical"
-                          : request.category === HelpRequestCategory.SHELTER
-                            ? "Shelter"
-                            : "Other"}
-                    </p>
                   </div>
 
                   <div>

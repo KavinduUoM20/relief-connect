@@ -2,7 +2,6 @@ import HelpRequestModel from '../models/help-request.model';
 import { 
   IHelpRequest, 
   CreateHelpRequestDto,
-  HelpRequestCategory,
   Urgency,
   HelpRequestStatus
 } from '@nx-mono-repo-deployment-test/shared';
@@ -22,10 +21,9 @@ class HelpRequestDao {
 
   /**
    * Find all help requests, filtering out expired ones (30 days)
-   * Optional filters: category, urgency, district (via approxArea)
+   * Optional filters: urgency, district (via approxArea)
    */
   public async findAll(filters?: {
-    category?: HelpRequestCategory;
     urgency?: Urgency;
     district?: string;
   }): Promise<IHelpRequest[]> {
@@ -42,9 +40,6 @@ class HelpRequestDao {
       };
 
       // Apply optional filters
-      if (filters?.category) {
-        whereClause[HelpRequestModel.HELP_REQUEST_CATEGORY] = filters.category;
-      }
       if (filters?.urgency) {
         whereClause[HelpRequestModel.HELP_REQUEST_URGENCY] = filters.urgency;
       }
@@ -81,12 +76,17 @@ class HelpRequestDao {
         [HelpRequestModel.HELP_REQUEST_USER_ID]: userId,
         [HelpRequestModel.HELP_REQUEST_LAT]: createHelpRequestDto.lat,
         [HelpRequestModel.HELP_REQUEST_LNG]: createHelpRequestDto.lng,
-        [HelpRequestModel.HELP_REQUEST_CATEGORY]: createHelpRequestDto.category,
         [HelpRequestModel.HELP_REQUEST_URGENCY]: createHelpRequestDto.urgency,
         [HelpRequestModel.HELP_REQUEST_SHORT_NOTE]: createHelpRequestDto.shortNote,
         [HelpRequestModel.HELP_REQUEST_APPROX_AREA]: createHelpRequestDto.approxArea,
         [HelpRequestModel.HELP_REQUEST_CONTACT_TYPE]: createHelpRequestDto.contactType,
         [HelpRequestModel.HELP_REQUEST_CONTACT]: createHelpRequestDto.contact,
+        [HelpRequestModel.HELP_REQUEST_NAME]: createHelpRequestDto.name,
+        [HelpRequestModel.HELP_REQUEST_TOTAL_PEOPLE]: createHelpRequestDto.totalPeople,
+        [HelpRequestModel.HELP_REQUEST_ELDERS]: createHelpRequestDto.elders,
+        [HelpRequestModel.HELP_REQUEST_CHILDREN]: createHelpRequestDto.children,
+        [HelpRequestModel.HELP_REQUEST_PETS]: createHelpRequestDto.pets,
+        [HelpRequestModel.HELP_REQUEST_RATION_ITEMS]: createHelpRequestDto.rationItems,
         [HelpRequestModel.HELP_REQUEST_STATUS]: HelpRequestStatus.OPEN,
       });
       return helpRequest.toJSON() as IHelpRequest;

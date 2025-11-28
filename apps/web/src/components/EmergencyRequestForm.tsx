@@ -13,11 +13,7 @@ import { Label } from 'apps/web/src/components/ui/label'
 import { Textarea } from 'apps/web/src/components/ui/textarea'
 // import LocationPicker from './LocationPicker' // Temporarily disabled - will integrate later
 import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest'
-import {
-  HelpRequestCategory,
-  Urgency,
-  ContactType,
-} from '@nx-mono-repo-deployment-test/shared/src/enums'
+import { Urgency, ContactType } from '@nx-mono-repo-deployment-test/shared/src/enums'
 import { Minus, Plus, MapPin } from 'lucide-react'
 
 interface EmergencyRequestFormProps {
@@ -137,9 +133,15 @@ export default function EmergencyRequestForm({
     try {
       const totalPeople =
         formData.elders + formData.children + (formData.requestType === 'family' ? 1 : 0)
-      const rationItemsList = Object.entries(formData.rationItems)
-        .filter(([_, count]) => count > 0)
-        .map(([id, count]) => {
+
+      // Convert ration items object to array of selected item IDs
+      const selectedRationItemIds = Object.entries(formData.rationItems)
+        .filter(([_, selected]) => selected === true)
+        .map(([id]) => id)
+
+      // Create human-readable list for shortNote (for backward compatibility)
+      const rationItemsList = selectedRationItemIds
+        .map((id) => {
           const item = RATION_ITEMS.find((i) => i.id === id)
           return item ? `${item.label} (${count})` : ''
         })
@@ -149,17 +151,20 @@ export default function EmergencyRequestForm({
       const helpRequestData: ICreateHelpRequest = {
         lat: formData.gpsLocation.lat,
         lng: formData.gpsLocation.lng,
-        category:
-          formData.rationItems.food || formData.rationItems.water
-            ? HelpRequestCategory.FOOD_WATER
-            : HelpRequestCategory.OTHER,
         urgency: formData.urgent ? Urgency.HIGH : Urgency.MEDIUM,
         shortNote:
-          formData.notes ||
-          `Name: ${formData.name}, People: ${totalPeople}${formData.children > 0 ? `, Kids: ${formData.children}` : ''}${formData.elders > 0 ? `, Elders: ${formData.elders}` : ''}${formData.pets > 0 ? `, Pets: ${formData.pets}` : ''}. Items: ${rationItemsList}`,
+          formData.notes || `Items: ${rationItemsList}${specialNeedsText}`.trim() || 'Help request',
         approxArea: `${formData.gpsLocation.lat}, ${formData.gpsLocation.lng}`,
         contactType: ContactType.PHONE,
         contact: formData.contactNumber,
+        // Team/People data as separate fields
+        name: formData.name || undefined,
+        totalPeople: totalPeople || undefined,
+        elders: formData.elders > 0 ? formData.elders : undefined,
+        children: formData.children > 0 ? formData.children : undefined,
+        pets: formData.pets > 0 ? formData.pets : undefined,
+        // Ration items as structured array
+        rationItems: selectedRationItemIds.length > 0 ? selectedRationItemIds : undefined,
       }
 
       const response = await onSubmit(helpRequestData)
