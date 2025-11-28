@@ -73,6 +73,25 @@ class HelpRequestController {
       next(error);
     }
   };
+
+  /**
+   * GET /api/help-requests/summary
+   * Get comprehensive summary statistics for help requests
+   * Returns counts by urgency, status, district, people totals, and ration items
+   */
+  getHelpRequestsSummary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.helpRequestService.getHelpRequestsSummary();
+
+      if (result.success && result.data) {
+        res.sendSuccess(result.data, result.message, 200);
+      } else {
+        res.sendError(result.error || 'Failed to retrieve help requests summary', 500);
+      }
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export default HelpRequestController;

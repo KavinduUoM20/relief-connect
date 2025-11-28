@@ -1,6 +1,6 @@
 import { HelpRequestDao } from '../dao';
 import { CreateHelpRequestDto, HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request';
-import { IApiResponse } from '@nx-mono-repo-deployment-test/shared/src/interfaces';
+import { IApiResponse, IHelpRequestSummary } from '@nx-mono-repo-deployment-test/shared/src/interfaces';
 import { Urgency } from '@nx-mono-repo-deployment-test/shared/src/enums';
 
 /**
@@ -141,6 +141,28 @@ class HelpRequestService {
       return {
         success: false,
         error: 'Failed to create help request',
+      };
+    }
+  }
+
+  /**
+   * Get comprehensive summary statistics for help requests
+   * Returns all counts including by urgency, status, district, people totals, and ration items
+   */
+  public async getHelpRequestsSummary(): Promise<IApiResponse<IHelpRequestSummary>> {
+    try {
+      const summary = await this.helpRequestDao.getSummary();
+
+      return {
+        success: true,
+        data: summary,
+        count: summary.total,
+      };
+    } catch (error) {
+      console.error('Error in HelpRequestService.getHelpRequestsSummary:', error);
+      return {
+        success: false,
+        error: 'Failed to retrieve help requests summary',
       };
     }
   }
