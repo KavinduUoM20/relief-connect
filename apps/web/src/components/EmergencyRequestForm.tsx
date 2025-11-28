@@ -136,14 +136,14 @@ export default function EmergencyRequestForm({
 
       // Convert ration items object to array of selected item IDs
       const selectedRationItemIds = Object.entries(formData.rationItems)
-        .filter(([_, selected]) => selected === true)
+        .filter(([_, selected]) => selected > 0)
         .map(([id]) => id)
 
       // Create human-readable list for shortNote (for backward compatibility)
       const rationItemsList = selectedRationItemIds
         .map((id) => {
           const item = RATION_ITEMS.find((i) => i.id === id)
-          return item ? `${item.label} (${count})` : ''
+          return item ? `${item.label} (${formData.rationItems[id]})` : ''
         })
         .filter(Boolean)
         .join(', ')
@@ -152,8 +152,7 @@ export default function EmergencyRequestForm({
         lat: formData.gpsLocation.lat,
         lng: formData.gpsLocation.lng,
         urgency: formData.urgent ? Urgency.HIGH : Urgency.MEDIUM,
-        shortNote:
-          formData.notes || `Items: ${rationItemsList}${specialNeedsText}`.trim() || 'Help request',
+        shortNote: formData.notes || `Items: ${rationItemsList}`.trim() || 'Help request',
         approxArea: `${formData.gpsLocation.lat}, ${formData.gpsLocation.lng}`,
         contactType: ContactType.PHONE,
         contact: formData.contactNumber,
