@@ -48,11 +48,11 @@ export class UserRouter extends BaseRouter {
       controller.registerUser
     );
 
-    // GET /api/users/:id - Get user by ID
-    this.router.get(
-      '/:id',
-      controller.getUserById
-    );
+    // // GET /api/users/:id - Get user by ID
+    // this.router.get(
+    //   '/:id',
+    //   controller.getUserById
+    // );
   }
 
   /**
