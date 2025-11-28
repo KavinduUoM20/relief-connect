@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'next-i18next';
 import { ICreateCamp } from '@nx-mono-repo-deployment-test/shared/src/interfaces/camp/ICreateCamp';
 import {
   CampType,
@@ -15,6 +16,7 @@ interface CampFormProps {
 }
 
 const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation('common');
   const [formData, setFormData] = useState<Partial<ICreateCamp>>({
     campType: CampType.COMMUNITY,
     name: '',
@@ -46,23 +48,23 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
 
     // Validation
     if (!formData.name || formData.name.trim().length === 0) {
-      setError('Camp name is required');
+      setError(t('campNameIsRequired'));
       return;
     }
     if (!formData.needs || formData.needs.length === 0) {
-      setError('At least one need must be selected');
+      setError(t('atLeastOneNeedRequired'));
       return;
     }
     if (!formData.shortNote || formData.shortNote.trim().length === 0) {
-      setError('Short note is required');
+      setError(t('shortNoteIsRequired'));
       return;
     }
     if (formData.shortNote.length > 500) {
-      setError('Short note must not exceed 500 characters');
+      setError(t('shortNoteMaxLength', { max: 500 }));
       return;
     }
     if (formData.contactType !== ContactType.NONE && !formData.contact) {
-      setError('Contact information is required when contact type is selected');
+      setError(t('contactInfoRequired'));
       return;
     }
 
@@ -70,7 +72,7 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
     try {
       await onSubmit(formData as ICreateCamp);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit camp');
+      setError(err instanceof Error ? err.message : t('failedToSubmitCamp'));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,10 +80,10 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
-      <h2>We Are a Camp</h2>
+      <h2>{t('wereAGroup')}</h2>
 
       <div className={styles.formGroup}>
-        <label htmlFor="campType">Camp Type *</label>
+        <label htmlFor="campType">{t('campType')} *</label>
         <select
           id="campType"
           value={formData.campType}
@@ -97,19 +99,19 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="name">Camp Name/Landmark *</label>
+        <label htmlFor="name">{t('campName')} *</label>
         <input
           id="name"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="e.g., Community Center, School Name"
+          placeholder={t('campNamePlaceholder')}
           required
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="peopleRange">People Count *</label>
+        <label htmlFor="peopleRange">{t('peopleCount')} *</label>
         <select
           id="peopleRange"
           value={formData.peopleRange}
@@ -127,7 +129,7 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
       </div>
 
       <div className={styles.formGroup}>
-        <label>Needs * (select at least one)</label>
+        <label>{t('needs')} * ({t('selectAtLeastOne')})</label>
         <div className={styles.checkboxes}>
           {Object.values(CampNeed).map((need) => (
             <label key={need} className={styles.checkboxLabel}>
@@ -143,7 +145,7 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="shortNote">Short Note (max 500 chars) *</label>
+        <label htmlFor="shortNote">{t('shortNote')} (max 500 {t('chars')}) *</label>
         <textarea
           id="shortNote"
           value={formData.shortNote}
@@ -152,11 +154,11 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
           rows={4}
           required
         />
-        <small>{formData.shortNote?.length || 0}/500 characters</small>
+        <small>{formData.shortNote?.length || 0}/500 {t('characters')}</small>
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="contactType">Contact Type *</label>
+        <label htmlFor="contactType">{t('contactType')} *</label>
         <select
           id="contactType"
           value={formData.contactType}
@@ -180,7 +182,7 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
 
       {formData.contactType !== ContactType.NONE && (
         <div className={styles.formGroup}>
-          <label htmlFor="contact">Contact *</label>
+          <label htmlFor="contact">{t('contact')} *</label>
           <input
             id="contact"
             type="text"
@@ -206,11 +208,11 @@ const CampForm: React.FC<CampFormProps> = ({ onSubmit, onCancel }) => {
       <div className={styles.formActions}>
         {onCancel && (
           <button type="button" onClick={onCancel} className={styles.cancelButton}>
-            Cancel
+            {t('cancel')}
           </button>
         )}
         <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
-          {isSubmitting ? 'Submitting...' : 'Submit'}
+          {isSubmitting ? t('processing') : t('submit')}
         </button>
       </div>
     </form>

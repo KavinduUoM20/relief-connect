@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'next-i18next';
 import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest';
 import {
   HelpRequestCategory,
@@ -14,6 +15,7 @@ interface HelpRequestFormProps {
 }
 
 const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation('common');
   const [formData, setFormData] = useState<Partial<ICreateHelpRequest>>({
     category: HelpRequestCategory.FOOD_WATER,
     urgency: Urgency.MEDIUM,
@@ -36,19 +38,19 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
 
     // Validation
     if (!formData.shortNote || formData.shortNote.trim().length === 0) {
-      setError('Short note is required');
+      setError(t('shortNoteIsRequired'));
       return;
     }
     if (formData.shortNote.length > 160) {
-      setError('Short note must not exceed 160 characters');
+      setError(t('shortNoteMaxLength', { max: 160 }));
       return;
     }
     if (!formData.approxArea || formData.approxArea.trim().length === 0) {
-      setError('Approximate area is required');
+      setError(t('approximateAreaIsRequired'));
       return;
     }
     if (formData.contactType !== ContactType.NONE && !formData.contact) {
-      setError('Contact information is required when contact type is selected');
+      setError(t('contactInfoRequired'));
       return;
     }
 
@@ -56,7 +58,7 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
     try {
       await onSubmit(formData as ICreateHelpRequest);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit help request');
+      setError(err instanceof Error ? err.message : t('failedToSubmitHelpRequest'));
     } finally {
       setIsSubmitting(false);
     }
@@ -64,10 +66,10 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
-      <h2>I Need Help</h2>
+      <h2>{t('iNeedHelp')}</h2>
 
       <div className={styles.formGroup}>
-        <label htmlFor="category">Category *</label>
+        <label htmlFor="category">{t('category')} *</label>
         <select
           id="category"
           value={formData.category}
@@ -85,7 +87,7 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="urgency">Urgency *</label>
+        <label htmlFor="urgency">{t('urgency')} *</label>
         <select
           id="urgency"
           value={formData.urgency}
@@ -101,7 +103,7 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="shortNote">Short Note (max 160 chars) *</label>
+        <label htmlFor="shortNote">{t('shortNote')} (max 160 {t('chars')}) *</label>
         <textarea
           id="shortNote"
           value={formData.shortNote}
@@ -110,23 +112,23 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
           rows={3}
           required
         />
-        <small>{formData.shortNote?.length || 0}/160 characters</small>
+        <small>{formData.shortNote?.length || 0}/160 {t('characters')}</small>
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="approxArea">Approximate Area *</label>
+        <label htmlFor="approxArea">{t('approximateArea')} *</label>
         <input
           id="approxArea"
           type="text"
           value={formData.approxArea}
           onChange={(e) => setFormData({ ...formData, approxArea: e.target.value })}
-          placeholder="e.g., Kelaniya near bridge"
+          placeholder={t('approximateAreaPlaceholder')}
           required
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="contactType">Contact Type *</label>
+        <label htmlFor="contactType">{t('contactType')} *</label>
         <select
           id="contactType"
           value={formData.contactType}
@@ -150,7 +152,7 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
 
       {formData.contactType !== ContactType.NONE && (
         <div className={styles.formGroup}>
-          <label htmlFor="contact">Contact *</label>
+          <label htmlFor="contact">{t('contact')} *</label>
           <input
             id="contact"
             type="text"
@@ -163,7 +165,7 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
       )}
 
       <div className={styles.formGroup}>
-        <label>Location *</label>
+        <label>{t('location')} *</label>
         <LocationPicker
           onLocationChange={handleLocationChange}
           initialLat={formData.lat}
@@ -176,11 +178,11 @@ const HelpRequestForm: React.FC<HelpRequestFormProps> = ({ onSubmit, onCancel })
       <div className={styles.formActions}>
         {onCancel && (
           <button type="button" onClick={onCancel} className={styles.cancelButton}>
-            Cancel
+            {t('cancel')}
           </button>
         )}
         <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
-          {isSubmitting ? 'Submitting...' : 'Submit'}
+          {isSubmitting ? t('processing') : t('submit')}
         </button>
       </div>
     </form>

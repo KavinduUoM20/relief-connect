@@ -1,58 +1,54 @@
-import React, { useState } from 'react';
-import Head from 'next/head';
-import { useRouter } from 'next/router';
-import HelpRequestForm from '../components/HelpRequestForm';
-import SafetyBanner from '../components/SafetyBanner';
-import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest';
-import { helpRequestService } from '../services';
-import styles from '../styles/Page.module.css';
+import React from 'react'
+import Head from 'next/head'
+import { useRouter } from 'next/router'
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
+import EmergencyRequestForm from '../components/EmergencyRequestForm'
+import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest'
+import { helpRequestService } from '../services'
+import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
 
 export default function NeedHelp() {
-  const router = useRouter();
-  const [success, setSuccess] = useState(false);
+  const router = useRouter()
 
   const handleSubmit = async (data: ICreateHelpRequest) => {
-    const response = await helpRequestService.createHelpRequest(data);
-    if (response.success) {
-      setSuccess(true);
-      setTimeout(() => {
-        router.push('/');
-      }, 3000);
-    } else {
-      throw new Error(response.error || 'Failed to submit help request');
+    // Store in localStorage to add to requests section
+    if (typeof window !== 'undefined') {
+      const existingRequests: HelpRequestResponseDto[] = JSON.parse(
+        localStorage.getItem('help_requests') || '[]'
+      )
+      const newRequest: HelpRequestResponseDto = {
+        ...data,
+        id: Date.now(), // Generate a temporary ID
+        createdAt: new Date(),
+      }
+      existingRequests.push(newRequest)
+      localStorage.setItem('help_requests', JSON.stringify(existingRequests))
     }
-  };
-
-  if (success) {
-    return (
-      <div className={styles.container}>
-        <Head>
-          <title>Help Request Submitted - Sri Lanka Crisis Help</title>
-        </Head>
-        <main className={styles.main}>
-          <div className={styles.successMessage}>
-            <h2>✅ Help Request Submitted Successfully!</h2>
-            <p>Your request has been posted and will be visible on the map.</p>
-            <p>Redirecting to home page...</p>
-          </div>
-        </main>
-      </div>
-    );
+    
+    const response = await helpRequestService.createHelpRequest(data)
+    return response
   }
 
   return (
-    <div className={styles.container}>
+    <>
       <Head>
         <title>I Need Help - Sri Lanka Crisis Help</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <main className={styles.main}>
-        <SafetyBanner />
-        <div className={styles.pageContent}>
-          <HelpRequestForm onSubmit={handleSubmit} onCancel={() => router.push('/')} />
-        </div>
-      </main>
-    </div>
-  );
+      <EmergencyRequestForm
+        onSubmit={handleSubmit}
+        onCancel={() => router.push('/')}
+        isGroup={false}
+      />
+    </>
+  )
+}
+
+export async function getServerSideProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  }
 }
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useTranslation } from 'next-i18next';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import CampForm from '../components/CampForm';
 import SafetyBanner from '../components/SafetyBanner';
 import { ICreateCamp } from '@nx-mono-repo-deployment-test/shared/src/interfaces/camp/ICreateCamp';
@@ -9,6 +11,7 @@ import styles from '../styles/Page.module.css';
 
 export default function Camp() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (data: ICreateCamp) => {
@@ -31,9 +34,9 @@ export default function Camp() {
         </Head>
         <main className={styles.main}>
           <div className={styles.successMessage}>
-            <h2>✅ Camp Registered Successfully!</h2>
-            <p>Your camp has been registered and will be visible on the map.</p>
-            <p>Redirecting to home page...</p>
+            <h2>✅ {t('campRegisteredSuccessfully')}</h2>
+            <p>{t('yourCampHasBeenRegistered')}</p>
+            <p>{t('redirectingToHomePage')}</p>
           </div>
         </main>
       </div>
@@ -54,5 +57,13 @@ export default function Camp() {
       </main>
     </div>
   );
+}
+
+export async function getServerSideProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  };
 }
 
