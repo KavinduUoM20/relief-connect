@@ -542,7 +542,7 @@ export default function EmergencyRequestForm({
                     Form submission Success
                   </div>
                   <div className="text-base text-gray-700">
-                    Your form submitted successfully. Hope you'll get help soon.
+                    Your form submitted successfully. Hope you&apos;ll get help soon.
                   </div>
                   <div className="text-base font-medium text-gray-900">
                     Emergency Support: <span className="text-primary">117</span>
