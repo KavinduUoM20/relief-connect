@@ -193,9 +193,9 @@ export default function RequestDetailsPage() {
                 <Button
                   className="flex-1 flex items-center justify-center gap-2 h-12 text-base"
                   onClick={() => {
-                    if (request.contactType === ContactType.PHONE && request.contact) {
+                    if (request.contactType === ContactType.PHONE) {
                       window.location.href = `tel:${request.contact}`
-                    } else if (request.contactType === ContactType.WHATSAPP && request.contact) {
+                    } else if (request.contactType === ContactType.WHATSAPP) {
                       const phoneNumber = request.contact.replace(/[^0-9]/g, "")
                       window.location.href = `https://wa.me/${phoneNumber}`
                     }

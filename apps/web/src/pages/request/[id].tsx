@@ -25,7 +25,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
-import { Urgency, HelpRequestCategory, ContactType } from '@nx-mono-repo-deployment-test/shared/src/enums'
+import { Urgency, HelpRequestCategory } from '@nx-mono-repo-deployment-test/shared/src/enums'
 
 interface DonationRequest {
   id: number
@@ -134,8 +134,8 @@ export default function RequestDetailsPage() {
             'Name: John Doe, People: 5, Kids: 2, Elders: 2. Items: Food & Water (3), Torch (2), Medicine (1)',
           approxArea: 'Colombo',
           contact: '+94771234567',
-          contactType: ContactType.PHONE,
-          createdAt: new Date('2024-01-15T10:00:00Z'),
+          contactType: 'Phone',
+          createdAt: '2024-01-15T10:00:00Z',
         }
         setRequest(mockRequest)
         setLoading(false)
@@ -170,14 +170,12 @@ export default function RequestDetailsPage() {
   }
 
   const handleDonate = () => {
-    if (!request) return
-    const requestName = request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
     // Navigate to donation form with request details
     router.push({
       pathname: '/donate',
       query: {
         requestId: request.id,
-        userName: requestName,
+        userName: name,
         category: request.category,
         urgency: request.urgency,
         items: request.shortNote?.match(/Items:\s*(.+)/)?.[1] || '',

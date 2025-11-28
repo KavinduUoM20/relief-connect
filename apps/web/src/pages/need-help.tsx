@@ -1,11 +1,10 @@
 import React from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import EmergencyRequestForm from '../components/EmergencyRequestForm'
 import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest'
 import { helpRequestService } from '../services'
-import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
+import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/HelpRequestResponseDto'
 
 export default function NeedHelp() {
   const router = useRouter()
@@ -19,7 +18,7 @@ export default function NeedHelp() {
       const newRequest: HelpRequestResponseDto = {
         ...data,
         id: Date.now(), // Generate a temporary ID
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       }
       existingRequests.push(newRequest)
       localStorage.setItem('help_requests', JSON.stringify(existingRequests))
@@ -42,13 +41,5 @@ export default function NeedHelp() {
       />
     </>
   )
-}
-
-export async function getServerSideProps({ locale }: { locale: string }) {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
-    },
-  }
 }
 

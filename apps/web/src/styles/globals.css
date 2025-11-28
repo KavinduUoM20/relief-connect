@@ -7,8 +7,9 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 
+    'Noto Sans Tamil', 'Lohit Tamil', 'Nirmala UI', sans-serif;
   background: #f5f5f5;
   min-height: 100vh;
 }
@@ -200,6 +201,116 @@ button {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Tamil language responsive improvements */
+  [lang="ta"], 
+  [lang="ta"] * {
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.6;
+  }
+  
+  /* Responsive font sizes for Tamil */
+  [lang="ta"] {
+    font-size: clamp(14px, 2.5vw, 16px);
+  }
+  
+  /* Better text wrapping for Tamil in cards and buttons */
+  [lang="ta"] .card,
+  [lang="ta"] button,
+  [lang="ta"] .btn {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  
+  /* Responsive text for Tamil in small containers */
+  [lang="ta"] .text-xs {
+    font-size: clamp(11px, 2vw, 12px);
+    line-height: 1.5;
+  }
+  
+  [lang="ta"] .text-sm {
+    font-size: clamp(13px, 2.2vw, 14px);
+    line-height: 1.6;
+  }
+  
+  [lang="ta"] .text-base {
+    font-size: clamp(14px, 2.5vw, 16px);
+    line-height: 1.6;
+  }
+  
+  /* Prevent text overflow in Tamil */
+  [lang="ta"] .truncate {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Better spacing for Tamil text */
+  [lang="ta"] p,
+  [lang="ta"] span,
+  [lang="ta"] div {
+    line-height: 1.6;
+  }
+  
+  /* Responsive buttons for Tamil */
+  [lang="ta"] button {
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.5;
+    padding: 0.5rem 1rem;
+  }
+  
+  /* Better form inputs for Tamil */
+  [lang="ta"] input,
+  [lang="ta"] textarea,
+  [lang="ta"] select {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Responsive labels for Tamil */
+  [lang="ta"] label {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.6;
+  }
+  
+  /* Improve card text wrapping for Tamil */
+  [lang="ta"] .card,
+  [lang="ta"] [class*="Card"] {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Better table/grid layouts for Tamil */
+  [lang="ta"] .grid {
+    word-wrap: break-word;
+  }
+  
+  /* Mobile-specific Tamil adjustments */
+  @media (max-width: 640px) {
+    [lang="ta"] {
+      font-size: 14px;
+    }
+    
+    [lang="ta"] .text-xl {
+      font-size: 1.125rem;
+      line-height: 1.5;
+    }
+    
+    [lang="ta"] .text-lg {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    
+    [lang="ta"] button {
+      font-size: 0.875rem;
+      padding: 0.625rem 0.875rem;
+      min-height: 2.5rem;
+    }
   }
 }
 

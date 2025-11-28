@@ -385,7 +385,7 @@ export default function MyRequestsPage() {
                               <span>{t('donated')}: {request.donatedDate}</span>
                             </div>
                           </div>
-<div className="flex flex-col gap-2 mt-4">
+                          <div className="flex flex-col gap-2 mt-4">
                             <Button
                               className="w-full"
                               onClick={() => router.push(`/request/${request.requestId}`)}
@@ -478,7 +478,7 @@ export default function MyRequestsPage() {
                               <span>{t('created')}: {request.createdDate}</span>
                             </div>
                           </div>
-<Button
+                          <Button
                             className="w-full mt-4"
                             onClick={() => router.push(`/request/${request.id}`)}
                           >

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next'
@@ -194,7 +194,7 @@ export default function MapDashboard() {
     return { mockRequests, mockCamps }
   }
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     setLoading(true)
     setError(null)
 
@@ -232,11 +232,11 @@ export default function MapDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [appliedFilters.district, appliedFilters.emergencyLevel])
+  }
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+  }, [appliedFilters.district, appliedFilters.emergencyLevel])
 
   // Update map center when applied filters change
   useEffect(() => {

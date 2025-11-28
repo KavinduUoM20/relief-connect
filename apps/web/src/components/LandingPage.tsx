@@ -45,7 +45,6 @@ import {
   DISTRICT_COORDINATES,
   getMockCoordinates,
 } from '../data/sri-lanka-locations'
-import apiClient from '../services/api-client'
 
 type ViewMode = 'initial' | 'need-help' | 'can-help'
 
@@ -132,7 +131,6 @@ export default function LandingPage() {
   const [userInfo, setUserInfo] = useState<{ name?: string; identifier?: string } | null>(null)
   const [identifier, setIdentifier] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showIdentifierPrompt, setShowIdentifierPrompt] = useState(true)
   const [helpRequests, setHelpRequests] = useState<HelpRequestResponseDto[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -150,35 +148,40 @@ export default function LandingPage() {
   }>({})
   const [selectedRequest, setSelectedRequest] = useState<HelpRequestResponseDto | null>(null)
 
-  // Check for existing authentication
+  // Check for token in URL and localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Check if user has access token (from API registration)
-      const accessToken = localStorage.getItem('accessToken')
-      const donorUser = localStorage.getItem('donor_user')
-      
-      if (accessToken && donorUser) {
-        try {
-          const user = JSON.parse(donorUser)
-          if (user.loggedIn && user.identifier) {
-            setUserInfo({
-              name: user.name || user.identifier,
-              identifier: user.identifier,
-            })
-            setShowIdentifierPrompt(false)
-          }
-        } catch (e) {
-          // Invalid data, clear it
-          localStorage.removeItem('donor_user')
-          apiClient.clearTokens()
+      const { token } = router.query
+      if (token) {
+        // Token in URL - store it and set user as logged in
+        const userData = {
+          identifier: token as string,
+          name: token as string,
         }
-      } else if (!accessToken && donorUser) {
-        // Old format without tokens, clear it
-        localStorage.removeItem('donor_user')
-        setShowIdentifierPrompt(true)
+        localStorage.setItem('donor_user', JSON.stringify({ ...userData, loggedIn: true }))
+        setUserInfo(userData)
+        setShowIdentifierPrompt(false)
+        // Remove token from URL
+        router.replace('/', undefined, { shallow: true })
+      } else {
+        // Check localStorage
+        const donorUser = localStorage.getItem('donor_user')
+        if (donorUser) {
+          try {
+            const user = JSON.parse(donorUser)
+            if (user.loggedIn && user.identifier) {
+              setUserInfo({
+                name: user.name || user.identifier,
+                identifier: user.identifier || user.phone || user.email,
+              })
+              setShowIdentifierPrompt(false)
+            }
+          } catch (e) {
+            // Invalid data
+          }
+        }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query])
 
   // Load requests from localStorage and combine with mock data
@@ -215,137 +218,31 @@ export default function LandingPage() {
 
   const handleIdentifierSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const trimmedIdentifier = identifier.trim()
-    
-    // Frontend validation
-    if (!trimmedIdentifier) {
-      setError('Please enter a username, email, or phone number')
-      return
-    }
-
-    if (trimmedIdentifier.length < 3) {
-      setError('Username must be at least 3 characters long')
-      return
-    }
-
-    if (trimmedIdentifier.length > 50) {
-      setError('Username must be less than 50 characters')
-      return
-    }
+    if (!identifier.trim()) return
 
     setLoading(true)
-    setError(null)
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-    try {
-      console.log('[LandingPage] Starting registration for username:', trimmedIdentifier)
-      console.log('[LandingPage] API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000')
-      
-      // Call the registration API
-      const response = await apiClient.post<{
-        success: boolean
-        data?: {
-          user: {
-            id: number
-            username: string
-            role: string
-            status: string
-            createdAt: string
-            updatedAt: string
-          }
-          accessToken: string
-          refreshToken: string
-        }
-        message?: string
-        error?: string
-        details?: Array<{
-          field: string
-          constraints: Record<string, string>
-        }>
-      }>('/api/users/register', { username: trimmedIdentifier }, true)
-
-      console.log('[LandingPage] Registration response:', response)
-
-      if (response.success && response.data) {
-        console.log('[LandingPage] Registration successful! User ID:', response.data.user.id)
-        console.log('[LandingPage] Storing tokens and user info...')
-        
-        // Store tokens using apiClient
-        apiClient.setTokens(response.data.accessToken, response.data.refreshToken)
-        console.log('[LandingPage] Tokens stored successfully')
-
-        // Store user info
-        const userData = {
-          name: response.data.user.username,
-          identifier: response.data.user.username,
-          loggedIn: true,
-        }
-        localStorage.setItem('donor_user', JSON.stringify(userData))
-        console.log('[LandingPage] User info stored:', userData)
-        
-        setUserInfo(userData)
-        setShowIdentifierPrompt(false)
-        setIdentifier('')
-
-        // Clear any URL tokens
-        router.replace('/', undefined, { shallow: true })
-        console.log('[LandingPage] Registration complete, redirecting...')
-      } else {
-        console.error('[LandingPage] Registration failed - response not successful:', response)
-        // Handle validation errors
-        let errorMessage = response.error || 'Registration failed. Please try again.'
-        if (response.details && Array.isArray(response.details) && response.details.length > 0) {
-          const firstError = response.details[0]
-          const constraintMessages = Object.values(firstError.constraints || {})
-          if (constraintMessages.length > 0) {
-            errorMessage = constraintMessages[0]
-          }
-        }
-        setError(errorMessage)
-      }
-    } catch (err) {
-      console.error('[LandingPage] Registration error caught:', err)
-      console.error('[LandingPage] Error type:', err instanceof Error ? err.constructor.name : typeof err)
-      console.error('[LandingPage] Error message:', err instanceof Error ? err.message : String(err))
-      
-      // Try to extract error details from the error
-      let errorMessage = 'Failed to register. Please check your connection and try again.'
-      
-      if (err instanceof Error) {
-        errorMessage = err.message
-        
-        // Check if it's a validation error with details
-        const errorObj = err as Error & { details?: unknown }
-        if (errorObj.details) {
-          try {
-            const details = Array.isArray(errorObj.details) ? errorObj.details : [errorObj.details]
-            if (details.length > 0) {
-              const firstDetail = details[0] as {
-                field?: string
-                constraints?: Record<string, string>
-              }
-              if (firstDetail?.constraints) {
-                const constraintMessages = Object.values(firstDetail.constraints)
-                if (constraintMessages.length > 0) {
-                  errorMessage = constraintMessages[0]
-                }
-              }
-            }
-          } catch (parseErr) {
-            // If parsing fails, use the original error message
-            console.error('Error parsing error details:', parseErr)
-          }
-        }
-      }
-      
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
+    // Generate token (in real app, this would come from API)
+    const token = identifier.replace(/[^a-zA-Z0-9]/g, '') + Date.now()
+    const userData = {
+      name: identifier,
+      identifier: identifier,
+      loggedIn: true,
     }
+
+    localStorage.setItem('donor_user', JSON.stringify(userData))
+    setUserInfo(userData)
+    setShowIdentifierPrompt(false)
+    setIdentifier('')
+
+    // Add token to URL
+    router.push(`/?token=${token}`, undefined, { shallow: true })
+    setLoading(false)
   }
 
   const handleLogout = () => {
     localStorage.removeItem('donor_user')
-    apiClient.clearTokens()
     setUserInfo(null)
     setShowIdentifierPrompt(true)
     setIdentifier('')
@@ -526,15 +423,6 @@ export default function LandingPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleIdentifierSubmit} className="space-y-4">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                  <div className="font-semibold mb-1">Error:</div>
-                  <div>{error}</div>
-                  <div className="mt-2 text-xs text-red-600">
-                    API URL: {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}
-                  </div>
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="identifier">{t('emailOrPhoneNumber')}</Label>
                 <div className="relative">
@@ -544,14 +432,10 @@ export default function LandingPage() {
                     type="text"
                     placeholder={t('enterYourEmailOrPhone')}
                     value={identifier}
-                    onChange={(e) => {
-                      setIdentifier(e.target.value)
-                      setError(null)
-                    }}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     className="pl-10 h-12"
                     required
                     autoFocus
-                    disabled={loading}
                   />
                 </div>
                 <p className="text-xs text-gray-500">{t('willBeUsedToIdentify')}</p>
@@ -690,7 +574,9 @@ export default function LandingPage() {
             <Card className="mb-6">
               <CardHeader>
                 <div className="flex items-center justify-between mb-4">
-                  <CardTitle className="text-2xl font-bold">{t('donationRequests')}</CardTitle>
+                  <CardTitle className="text-xl sm:text-2xl font-bold break-words">
+                    {t('donationRequests')}
+                  </CardTitle>
                   <Button onClick={handleViewMap} variant="outline">
                     <MapPin className="h-4 w-4 mr-2" />
                     {t('viewOnMap')}
@@ -702,7 +588,7 @@ export default function LandingPage() {
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertCircle className="h-4 w-4 text-blue-600" />
-                      <span className="text-xs font-medium text-blue-600">
+                      <span className="text-xs font-medium text-blue-600 break-words">
                         {t('totalRequests')}
                       </span>
                     </div>
@@ -713,7 +599,9 @@ export default function LandingPage() {
                   <div className="bg-green-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="h-4 w-4 text-green-600" />
-                      <span className="text-xs font-medium text-green-600">{t('totalPeople')}</span>
+                      <span className="text-xs font-medium text-green-600 break-words">
+                        {t('totalPeople')}
+                      </span>
                     </div>
                     <div className="text-2xl font-bold text-green-900">
                       {requestsAnalytics.totalPeople}
@@ -722,7 +610,7 @@ export default function LandingPage() {
                   <div className="bg-purple-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Package className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs font-medium text-purple-600">
+                      <span className="text-xs font-medium text-purple-600 break-words">
                         {t('mealsNeeded')}
                       </span>
                     </div>
@@ -733,7 +621,9 @@ export default function LandingPage() {
                   <div className="bg-orange-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="h-4 w-4 text-orange-600" />
-                      <span className="text-xs font-medium text-orange-600">{t('children')}</span>
+                      <span className="text-xs font-medium text-orange-600 break-words">
+                        {t('children')}
+                      </span>
                     </div>
                     <div className="text-2xl font-bold text-orange-900">
                       {requestsAnalytics.totalKids}
@@ -742,7 +632,9 @@ export default function LandingPage() {
                   <div className="bg-pink-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="h-4 w-4 text-pink-600" />
-                      <span className="text-xs font-medium text-pink-600">{t('elders')}</span>
+                      <span className="text-xs font-medium text-pink-600 break-words">
+                        {t('elders')}
+                      </span>
                     </div>
                     <div className="text-2xl font-bold text-pink-900">
                       {requestsAnalytics.totalElders}
@@ -751,7 +643,7 @@ export default function LandingPage() {
                   <div className="bg-teal-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Heart className="h-4 w-4 text-teal-600" />
-                      <span className="text-xs font-medium text-teal-600">
+                      <span className="text-xs font-medium text-teal-600 break-words">
                         {t('donationsDone')}
                       </span>
                     </div>
@@ -779,7 +671,7 @@ export default function LandingPage() {
                   </div>
 
                   <select
-                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[150px]"
+                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[150px] max-w-full break-words"
                     value={tempFilters.province || ''}
                     onChange={(e) => {
                       const province = e.target.value || undefined
@@ -799,7 +691,7 @@ export default function LandingPage() {
                   </select>
 
                   <select
-                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[150px]"
+                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[150px] max-w-full break-words"
                     value={tempFilters.district || ''}
                     onChange={(e) =>
                       setTempFilters({
@@ -818,7 +710,7 @@ export default function LandingPage() {
                   </select>
 
                   <select
-                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[130px]"
+                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[130px] max-w-full break-words"
                     value={tempFilters.emergencyLevel || ''}
                     onChange={(e) =>
                       setTempFilters({
@@ -834,7 +726,7 @@ export default function LandingPage() {
                   </select>
 
                   <select
-                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[120px]"
+                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm min-w-[120px] max-w-full break-words"
                     value={tempFilters.type || ''}
                     onChange={(e) =>
                       setTempFilters({
@@ -889,7 +781,7 @@ export default function LandingPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
-                                <div className="font-bold text-xl text-gray-900 group-hover:text-primary transition-colors">
+                                <div className="font-bold text-lg sm:text-xl text-gray-900 group-hover:text-primary transition-colors break-words">
                                   {name}
                                 </div>
                                 <div
@@ -917,7 +809,7 @@ export default function LandingPage() {
                           {/* Location */}
                           <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
                             <MapPin className="h-4 w-4 text-red-500 flex-shrink-0" />
-                            <span className="font-medium truncate">
+                            <span className="font-medium break-words line-clamp-2">
                               {request.approxArea || 'Unknown location'}
                             </span>
                           </div>
@@ -937,7 +829,7 @@ export default function LandingPage() {
                                   <Users className="h-4 w-4 text-purple-600" />
                                 </div>
                                 <div className="text-lg font-bold text-purple-700">{kidsCount}</div>
-                                <div className="text-xs text-gray-600">Kids</div>
+                                <div className="text-xs text-gray-600 break-words">{t('kids')}</div>
                               </div>
                             )}
                             {parseInt(eldersCount) > 0 && (
@@ -948,7 +840,9 @@ export default function LandingPage() {
                                 <div className="text-lg font-bold text-orange-700">
                                   {eldersCount}
                                 </div>
-                                <div className="text-xs text-gray-600">Elders</div>
+                                <div className="text-xs text-gray-600 break-words">
+                                  {t('eldersLabel')}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -958,10 +852,12 @@ export default function LandingPage() {
                             <div className="flex items-start gap-2">
                               <Package className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
                               <div className="flex-1">
-                                <div className="text-xs font-semibold text-purple-700 mb-1">
-                                  Items Needed
+                                <div className="text-xs font-semibold text-purple-700 mb-1 break-words">
+                                  {t('requiredItems')}
                                 </div>
-                                <div className="text-sm text-gray-700 line-clamp-2">{items}</div>
+                                <div className="text-sm text-gray-700 line-clamp-2 break-words">
+                                  {items}
+                                </div>
                               </div>
                             </div>
                           </div>

@@ -1,18 +1,21 @@
 import React, { useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'apps/web/src/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from 'apps/web/src/components/ui/card'
 import { Button } from 'apps/web/src/components/ui/button'
 import { Input } from 'apps/web/src/components/ui/input'
 import { Label } from 'apps/web/src/components/ui/label'
-import { ArrowLeft, User } from 'lucide-react'
-import apiClient from '../services/api-client'
+import { ArrowLeft, User, Phone } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,113 +23,40 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
 
-    const trimmedUsername = username.trim()
-    if (!trimmedUsername) {
-      setError('Please enter your username, email, or phone number')
-      return
-    }
-
-    if (trimmedUsername.length < 3) {
-      setError('Username must be at least 3 characters long')
+    if (!phone.trim()) {
+      setError('Please enter your phone number')
       return
     }
 
     setLoading(true)
 
-    try {
-      console.log('Logging in with username:', trimmedUsername)
-      
-      // Call the login API
-      const response = await apiClient.post<{
-        success: boolean
-        data?: {
-          user: {
-            id: number
-            username: string
-            role: string
-            status: string
-            createdAt: string
-            updatedAt: string
-          }
-          accessToken: string
-          refreshToken: string
-        }
-        message?: string
-        error?: string
-        details?: Array<{
-          field: string
-          constraints: Record<string, string>
-        }>
-      }>('/api/auth/login', { 
-        username: trimmedUsername,
-        ...(password.trim() && { password: password.trim() })
-      }, true)
+    // Mock login - check if user exists in localStorage
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-      console.log('Login response:', response)
+    // Check if user exists (in real app, this would call an API)
+    const existingUsers = localStorage.getItem('donor_users')
+    const users = existingUsers ? JSON.parse(existingUsers) : []
 
-      if (response.success && response.data) {
-        // Store tokens using apiClient.setTokens()
-        apiClient.setTokens(response.data.accessToken, response.data.refreshToken)
+    const user = users.find((u: any) => u.phone === phone)
 
-        // Store user info
-        const userData = {
-          name: response.data.user.username,
-          identifier: response.data.user.username,
-          loggedIn: true,
-        }
-        localStorage.setItem('donor_user', JSON.stringify(userData))
-        
-        setLoading(false)
-        router.push('/requests')
-      } else {
-        // Handle validation errors
-        let errorMessage = response.error || 'Login failed. Please try again.'
-        if (response.details && Array.isArray(response.details) && response.details.length > 0) {
-          const firstError = response.details[0]
-          const constraintMessages = Object.values(firstError.constraints || {})
-          if (constraintMessages.length > 0) {
-            errorMessage = constraintMessages[0]
-          }
-        }
-        setError(errorMessage)
-        setLoading(false)
-      }
-    } catch (err) {
-      console.error('Login error:', err)
-      
-      // Try to extract error details from the error
-      let errorMessage = 'Failed to login. Please check your connection and try again.'
-      
-      if (err instanceof Error) {
-        errorMessage = err.message
-        
-        // Check if it's a validation error with details
-        const errorObj = err as Error & { details?: unknown }
-        if (errorObj.details) {
-          try {
-            const details = Array.isArray(errorObj.details) ? errorObj.details : [errorObj.details]
-            if (details.length > 0) {
-              const firstDetail = details[0] as {
-                field?: string
-                constraints?: Record<string, string>
-              }
-              if (firstDetail?.constraints) {
-                const constraintMessages = Object.values(firstDetail.constraints)
-                if (constraintMessages.length > 0) {
-                  errorMessage = constraintMessages[0]
-                }
-              }
-            }
-          } catch (parseErr) {
-            // If parsing fails, use the original error message
-            console.error('Error parsing error details:', parseErr)
-          }
-        }
-      }
-      
-      setError(errorMessage)
+    if (!user) {
+      setError('Phone number not found. Please register first.')
       setLoading(false)
+      return
     }
+
+    // Store logged in user info
+    localStorage.setItem(
+      'donor_user',
+      JSON.stringify({
+        name: user.name,
+        phone: user.phone,
+        loggedIn: true,
+      })
+    )
+
+    setLoading(false)
+    router.push('/requests')
   }
 
   return (
@@ -137,11 +67,7 @@ export default function LoginPage() {
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
         <div className="w-full max-w-md">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/')}
-            className="mb-4"
-          >
+          <Button variant="ghost" onClick={() => router.push('/')} className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
           </Button>
@@ -153,49 +79,25 @@ export default function LoginPage() {
               </div>
               <CardTitle className="text-2xl font-bold">Login as Donor</CardTitle>
               <CardDescription className="text-base mt-2">
-                Enter your username, email, or phone number to login
+                Enter your phone number to access the requests
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username, Email, or Phone</Label>
+                  <Label htmlFor="phone">Phone Number</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="username"
-                      type="text"
-                      placeholder="Enter your username, email, or phone"
-                      value={username}
-                      onChange={(e) => {
-                        setUsername(e.target.value)
-                        setError(null)
-                      }}
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       className="pl-10"
                       required
-                      disabled={loading}
-                      autoFocus
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password (Optional)</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter password if you have one"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      setError(null)
-                    }}
-                    className="pl-10"
-                    disabled={loading}
-                  />
-                  <p className="text-xs text-gray-500">
-                    If you registered without a password, leave this empty
-                  </p>
                 </div>
 
                 {error && (
@@ -204,12 +106,16 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base font-semibold"
+                  disabled={loading}
+                >
                   {loading ? 'Logging in...' : 'Login as Donor'}
                 </Button>
 
                 <div className="text-center text-sm text-gray-500">
-                  <p>Don&apos;t have an account?</p>
+                  <p>Don't have an account?</p>
                   <Button
                     variant="link"
                     className="text-primary p-0 h-auto"
@@ -225,12 +131,4 @@ export default function LoginPage() {
       </div>
     </>
   )
-}
-
-export async function getServerSideProps({ locale }: { locale: string }) {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
-    },
-  }
 }
