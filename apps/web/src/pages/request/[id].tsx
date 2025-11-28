@@ -41,12 +41,8 @@ interface DonationRequest {
 
 // Donation requests are now loaded from localStorage
 
-// Dummy photos
-const dummyPhotos = [
-  'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop',
-]
+// Placeholder image for requests (no photos available yet)
+const placeholderImage = 'https://via.placeholder.com/800x600?text=No+Photo+Available'
 
 export default function RequestDetailsPage() {
   const router = useRouter()
@@ -110,17 +106,12 @@ export default function RequestDetailsPage() {
       const loadRequest = async () => {
         setLoading(true)
         try {
-          // Fetch all requests and find the one with matching ID
-          const response = await helpRequestService.getAllHelpRequests()
+          // Fetch request by ID
+          const response = await helpRequestService.getHelpRequestById(Number(id))
           if (response.success && response.data) {
-            const foundRequest = response.data.find((req) => req.id === Number(id))
-            if (foundRequest) {
-              setRequest(foundRequest)
-            } else {
-              setError('Request not found')
-            }
+            setRequest(response.data)
           } else {
-            setError(response.error || 'Failed to load request')
+            setError(response.error || 'Request not found')
           }
         } catch (err) {
           console.error('[RequestPage] Error loading request:', err)
@@ -161,7 +152,12 @@ export default function RequestDetailsPage() {
 
   const handleDonate = () => {
     if (!request) return
-    const requestName = request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
+    const requestName = request.name || request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
+    // Use rationItems if available, otherwise parse from shortNote
+    const itemsString = request.rationItems && request.rationItems.length > 0
+      ? request.rationItems.join(', ')
+      : request.shortNote?.match(/Items:\s*(.+)/)?.[1] || ''
+    
     // Navigate to donation form with request details
     router.push({
       pathname: '/donate',
@@ -169,7 +165,7 @@ export default function RequestDetailsPage() {
         requestId: request.id,
         userName: requestName,
         urgency: request.urgency,
-        items: request.shortNote?.match(/Items:\s*(.+)/)?.[1] || '',
+        items: itemsString,
         location: request.approxArea || '',
       },
     })
@@ -195,15 +191,24 @@ export default function RequestDetailsPage() {
     )
   }
 
-  const name = request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
-  const peopleMatch = request.shortNote?.match(/People:\s*(\d+)/)
-  const peopleCount = peopleMatch ? parseInt(peopleMatch[1]) : 1
-  const kidsMatch = request.shortNote?.match(/Kids:\s*(\d+)/)
-  const kidsCount = kidsMatch ? parseInt(kidsMatch[1]) : 0
-  const eldersMatch = request.shortNote?.match(/Elders:\s*(\d+)/)
-  const eldersCount = eldersMatch ? parseInt(eldersMatch[1]) : 0
-  const itemsMatch = request.shortNote?.match(/Items:\s*(.+)/)
-  const items = itemsMatch ? itemsMatch[1] : 'Various items'
+  // Use real data from API response fields
+  const name = request.name || request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
+  const peopleCount = request.totalPeople || (() => {
+    const match = request.shortNote?.match(/People:\s*(\d+)/)
+    return match ? parseInt(match[1]) : 1
+  })()
+  const kidsCount = request.children || (() => {
+    const match = request.shortNote?.match(/Kids:\s*(\d+)/)
+    return match ? parseInt(match[1]) : 0
+  })()
+  const eldersCount = request.elders || (() => {
+    const match = request.shortNote?.match(/Elders:\s*(\d+)/)
+    return match ? parseInt(match[1]) : 0
+  })()
+  // Use rationItems if available, otherwise parse from shortNote
+  const items = request.rationItems && request.rationItems.length > 0
+    ? request.rationItems.join(', ')
+    : request.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
 
   return (
     <>
@@ -227,40 +232,17 @@ export default function RequestDetailsPage() {
         </div>
 
         <div className="container mx-auto px-4 py-6 max-w-4xl">
-          {/* Photos Section */}
+          {/* Photos Section - Placeholder for now */}
           <Card className="mb-6">
             <CardContent className="p-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2">
-                {dummyPhotos.map((photo, index) => (
-                  <div
-                    key={index}
-                    className="relative aspect-video cursor-pointer overflow-hidden rounded-lg group"
-                    onClick={() => setSelectedPhoto(photo)}
-                  >
-                    <img
-                      src={photo}
-                      alt={`Request photo ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-                  </div>
-                ))}
+              <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                <div className="text-center text-gray-400">
+                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No photos available</p>
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Photo Modal */}
-          {selectedPhoto && (
-            <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-              <DialogContent className="max-w-4xl p-0">
-                <img
-                  src={selectedPhoto}
-                  alt="Request photo"
-                  className="w-full h-auto max-h-[80vh] object-contain"
-                />
-              </DialogContent>
-            </Dialog>
-          )}
 
           {/* Details Section */}
           <Card className="mb-6">

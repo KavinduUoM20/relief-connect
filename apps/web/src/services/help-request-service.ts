@@ -50,6 +50,52 @@ class HelpRequestService {
   }
 
   /**
+   * Get a help request by ID
+   */
+  public async getHelpRequestById(
+    id: number
+  ): Promise<IApiResponse<HelpRequestResponseDto>> {
+    try {
+      const response = await apiClient.get<IApiResponse<HelpRequestResponseDto>>(
+        `${this.basePath}/${id}`
+      );
+      return response;
+    } catch (error) {
+      console.error('Error in HelpRequestService.getHelpRequestById:', error);
+      
+      // Fallback: If the route doesn't exist yet, fetch all and filter by ID
+      if (error instanceof Error && error.message.includes('Route not found')) {
+        console.log('[HelpRequestService] Route not found, falling back to getAllHelpRequests');
+        try {
+          const allResponse = await this.getAllHelpRequests();
+          if (allResponse.success && allResponse.data) {
+            const foundRequest = allResponse.data.find((req) => req.id === id);
+            if (foundRequest) {
+              return {
+                success: true,
+                data: foundRequest,
+                message: 'Help request retrieved successfully',
+              };
+            } else {
+              return {
+                success: false,
+                error: 'Help request not found',
+              };
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Error in fallback getAllHelpRequests:', fallbackError);
+        }
+      }
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch help request',
+      };
+    }
+  }
+
+  /**
    * Create a new help request
    */
   public async createHelpRequest(
