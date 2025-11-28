@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
 import { Urgency, HelpRequestCategory } from '@nx-mono-repo-deployment-test/shared/src/enums'
+import { helpRequestService } from '../services'
 
 type RequestType = 'donor' | 'victim'
 
@@ -62,53 +63,7 @@ interface VictimRequest {
   items: string
 }
 
-// Donor requests are now loaded from localStorage
-
-// Dummy data for victim requests (help requests made)
-const dummyVictimRequests: VictimRequest[] = [
-  {
-    id: 1,
-    title: 'Family needs urgent food supplies',
-    location: 'Colombo',
-    category: HelpRequestCategory.FOOD_WATER,
-    urgency: Urgency.HIGH,
-    status: 'completed',
-    createdDate: '2024-01-10',
-    contact: '+94771234567',
-    contactType: 'Phone',
-    shortNote: 'Name: John Doe, People: 5, Kids: 2, Elders: 2. Items: Food & Water (3), Torch (2)',
-    peopleCount: 5,
-    items: 'Food & Water (3), Torch (2)',
-  },
-  {
-    id: 2,
-    title: 'Need medical assistance',
-    location: 'Kandy',
-    category: HelpRequestCategory.MEDICAL,
-    urgency: Urgency.MEDIUM,
-    status: 'in_progress',
-    createdDate: '2024-01-12',
-    contact: '+94771234568',
-    contactType: 'Phone',
-    shortNote: 'Name: Jane Smith, People: 2, Elders: 2. Items: Medicine (5), First Aid Kit (2)',
-    peopleCount: 2,
-    items: 'Medicine (5), First Aid Kit (2)',
-  },
-  {
-    id: 3,
-    title: 'Urgent shelter needed',
-    location: 'Galle',
-    category: HelpRequestCategory.SHELTER,
-    urgency: Urgency.HIGH,
-    status: 'pending',
-    createdDate: '2024-01-20',
-    contact: 'shelter@example.com',
-    contactType: 'Email',
-    shortNote: 'Name: Group Request, People: 15, Kids: 5, Elders: 3. Items: Tents (3), Blankets (10)',
-    peopleCount: 15,
-    items: 'Tents (3), Blankets (10)',
-  },
-]
+// Donor requests and victim requests are now loaded from API/localStorage
 
 export default function MyRequestsPage() {
   const router = useRouter()
@@ -119,6 +74,8 @@ export default function MyRequestsPage() {
   )
   const [userInfo, setUserInfo] = useState<{ name?: string; identifier?: string } | null>(null)
   const [donorRequests, setDonorRequests] = useState<DonorRequest[]>([])
+  const [victimRequests, setVictimRequests] = useState<VictimRequest[]>([])
+  const [loading, setLoading] = useState(true)
 
   // Load donations from localStorage
   useEffect(() => {
@@ -194,6 +151,56 @@ export default function MyRequestsPage() {
       setActiveTab(tab as RequestType)
     }
   }, [tab])
+
+  // Load victim requests (help requests) from API
+  useEffect(() => {
+    if (userInfo) {
+      const loadVictimRequests = async () => {
+        try {
+          const response = await helpRequestService.getAllHelpRequests()
+          if (response.success && response.data) {
+            // Filter help requests by current user's contact info
+            const userHelpRequests = response.data
+              .filter((req) => req.contact === userInfo.identifier)
+              .map((req): VictimRequest => {
+                const name = req.name || req.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request'
+                const peopleCount = req.totalPeople || (() => {
+                  const match = req.shortNote?.match(/People:\s*(\d+)/)
+                  return match ? parseInt(match[1]) : 1
+                })()
+                const items = req.rationItems && req.rationItems.length > 0
+                  ? req.rationItems.join(', ')
+                  : req.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
+                
+                return {
+                  id: req.id,
+                  title: name,
+                  location: req.approxArea || 'Unknown',
+                  category: req.category,
+                  urgency: req.urgency,
+                  status: (req.status?.toLowerCase() as VictimRequest['status']) || 'pending',
+                  createdDate: req.createdAt ? new Date(req.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                  contact: req.contact || '',
+                  contactType: req.contactType || 'Phone',
+                  shortNote: req.shortNote || '',
+                  peopleCount,
+                  items,
+                }
+              })
+            
+            setVictimRequests(userHelpRequests)
+          }
+        } catch (error) {
+          console.error('[MyRequestsPage] Error loading victim requests:', error)
+          setVictimRequests([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      
+      loadVictimRequests()
+    }
+  }, [userInfo])
 
   // Reload donations when switching to donor tab
   useEffect(() => {
@@ -339,7 +346,7 @@ export default function MyRequestsPage() {
             >
               <div className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                <span>{t('myDonations')} ({dummyDonorRequests.length})</span>
+                <span>{t('myDonations')} ({donorRequests.length})</span>
               </div>
             </button>
             <button
@@ -352,7 +359,7 @@ export default function MyRequestsPage() {
             >
               <div className="flex items-center gap-2">
                 <HelpCircle className="h-5 w-5" />
-                <span>{t('myHelpRequests')} ({dummyVictimRequests.length})</span>
+                <span>{t('myHelpRequests')} ({victimRequests.length})</span>
               </div>
             </button>
           </div>
@@ -449,19 +456,25 @@ export default function MyRequestsPage() {
           {/* Victim Requests Tab */}
           {activeTab === 'victim' && (
             <div className="space-y-4">
-              {dummyVictimRequests.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <HelpCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium mb-2">{t('noHelpRequestsYet')}</p>
-                    <p className="text-sm text-gray-500">
-                      {t('createRequestToGetAssistance')}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {dummyVictimRequests.map((request) => (
+              {loading ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <p className="text-gray-600">Loading...</p>
+                      </CardContent>
+                    </Card>
+                  ) : victimRequests.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <HelpCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-lg font-medium mb-2">{t('noHelpRequestsYet')}</p>
+                        <p className="text-sm text-gray-500">
+                          {t('createRequestToGetAssistance')}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {victimRequests.map((request) => (
                     <Card
                       key={request.id}
                       className="transition-all hover:shadow-lg overflow-hidden border-2"
