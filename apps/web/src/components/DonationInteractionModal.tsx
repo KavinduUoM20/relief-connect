@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Package, CheckCircle, Clock, User, Phone, MapPin, HandHeart, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -34,13 +34,7 @@ export default function DonationInteractionModal({
   const [rationItems, setRationItems] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && helpRequest.id) {
-      loadDonations();
-    }
-  }, [isOpen, helpRequest.id]);
-
-  const loadDonations = async () => {
+  const loadDonations = useCallback(async () => {
     if (!helpRequest.id) return;
     setLoading(true);
     setError(null);
@@ -56,7 +50,13 @@ export default function DonationInteractionModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [helpRequest.id]);
+
+  useEffect(() => {
+    if (isOpen && helpRequest.id) {
+      loadDonations();
+    }
+  }, [isOpen, helpRequest.id, loadDonations]);
 
   const handleRationItemChange = (itemId: string, count: number) => {
     if (count <= 0) {
