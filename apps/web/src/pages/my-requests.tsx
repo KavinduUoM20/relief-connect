@@ -27,9 +27,11 @@ import {
   Clock,
   XCircle,
 } from 'lucide-react'
-import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
+import { HelpRequestResponseDto, HelpRequestWithOwnershipResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response'
+import { DonationWithHelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/donation/response/donation_with_help_request_response_dto'
 import { Urgency, HelpRequestCategory } from '@nx-mono-repo-deployment-test/shared/src/enums'
-import { helpRequestService } from '../services'
+import { helpRequestService, donationService } from '../services'
+import { RATION_ITEMS } from '../components/EmergencyRequestForm'
 
 type RequestType = 'donor' | 'victim'
 
@@ -76,75 +78,99 @@ export default function MyRequestsPage() {
   const [donorRequests, setDonorRequests] = useState<DonorRequest[]>([])
   const [victimRequests, setVictimRequests] = useState<VictimRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // Load donations from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined' && userInfo) {
-      const allDonations = JSON.parse(
-        localStorage.getItem('donations') || '[]'
-      )
-      const donationStatuses = JSON.parse(
-        localStorage.getItem('donation_statuses') || '{}'
-      )
-      
-      // Filter donations by current user's contact info
-      const userDonations = allDonations
-        .filter((donation: any) => 
-          donation.donorContact === userInfo.identifier ||
-          donation.donorName === userInfo.name ||
-          donation.donorName === userInfo.identifier
-        )
-        .map((donation: any) => {
-          // Try to get request details if available
-          const helpRequests = JSON.parse(
-            localStorage.getItem('help_requests') || '[]'
-          )
-          const relatedRequest = helpRequests.find((req: any) => req.id === donation.requestId)
-          
-          return {
-            id: donation.id,
-            requestId: donation.requestId || 0,
-            requestTitle: relatedRequest 
-              ? (relatedRequest.name || relatedRequest.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request')
-              : `Request #${donation.requestId || 'Unknown'}`,
-            location: relatedRequest?.approxArea || 'Unknown',
-            category: relatedRequest?.category || HelpRequestCategory.OTHER,
-            urgency: relatedRequest?.urgency || Urgency.MEDIUM,
-            status: (donationStatuses[donation.id] as DonorRequest['status']) || donation.status || 'pending',
-            donatedItems: donation.items || 'Various items',
-            donatedDate: donation.requestedDate || new Date().toISOString().split('T')[0],
-            contact: donation.donorContact,
-            contactType: donation.donorContactType,
-            shortNote: donation.message || '',
-          }
-        })
-      
-      setDonorRequests(userDonations)
-    }
-  }, [userInfo])
-
+  // Check authentication (JWT token)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const donorUser = localStorage.getItem('donor_user')
-      if (donorUser) {
-        try {
-          const user = JSON.parse(donorUser)
-          if (user.loggedIn && user.identifier) {
-            setUserInfo({
-              name: user.name || user.identifier,
-              identifier: user.identifier || user.phone || user.email,
-            })
-          } else {
-            router.push('/')
+      const accessToken = localStorage.getItem('accessToken')
+      if (accessToken) {
+        setIsAuthenticated(true)
+        // Try to get user info from localStorage or API
+        const donorUser = localStorage.getItem('donor_user')
+        if (donorUser) {
+          try {
+            const user = JSON.parse(donorUser)
+            if (user.loggedIn && user.identifier) {
+              setUserInfo({
+                name: user.name || user.identifier,
+                identifier: user.identifier || user.phone || user.email,
+              })
+            }
+          } catch (e) {
+            console.error('[MyRequestsPage] Error parsing donor_user:', e)
           }
-        } catch (e) {
-          router.push('/')
         }
       } else {
+        // No token, redirect to home
         router.push('/')
       }
     }
   }, [router])
+
+  // Load donations from API (using JWT authentication)
+  useEffect(() => {
+    if (isAuthenticated) {
+      const loadDonorRequests = async () => {
+        try {
+          setLoading(true)
+          console.log('[MyRequestsPage] Loading my donations...')
+          const response = await donationService.getMyDonations()
+          console.log('[MyRequestsPage] My donations response:', response)
+          if (response.success && response.data) {
+            const userDonations = response.data.map((donation): DonorRequest => {
+              const helpRequest = donation.helpRequest
+              
+              // Convert rationItems object to readable string
+              const itemsList = Object.entries(donation.rationItems || {})
+                .map(([itemId, quantity]) => {
+                  const item = RATION_ITEMS.find((i) => i.id === itemId)
+                  return item ? `${item.label} (${quantity})` : `${itemId} (${quantity})`
+                })
+                .join(', ') || 'Various items'
+              
+              // Determine status based on donation flags
+              let status: DonorRequest['status'] = 'pending'
+              if (donation.ownerMarkedCompleted) {
+                status = 'completed'
+              } else if (donation.donatorMarkedCompleted) {
+                status = 'in_progress'
+              } else if (donation.donatorMarkedScheduled) {
+                status = 'in_progress'
+              }
+              
+              return {
+                id: donation.id,
+                requestId: donation.helpRequestId,
+                requestTitle: helpRequest?.name || helpRequest?.shortNote?.split(',')[0]?.replace('Name:', '').trim() || `Request #${donation.helpRequestId}`,
+                location: helpRequest?.approxArea || 'Unknown',
+                category: HelpRequestCategory.OTHER, // Category not available in DTO
+                urgency: helpRequest?.urgency || Urgency.MEDIUM,
+                status,
+                donatedItems: itemsList,
+                donatedDate: donation.createdAt ? new Date(donation.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                contact: helpRequest?.contact || '',
+                contactType: helpRequest?.contactType || 'Phone',
+                shortNote: helpRequest?.shortNote || '',
+              }
+            })
+            
+            setDonorRequests(userDonations)
+          } else {
+            console.error('[MyRequestsPage] Failed to load donations:', response.error)
+            setDonorRequests([])
+          }
+        } catch (error) {
+          console.error('[MyRequestsPage] Error loading donor requests:', error)
+          setDonorRequests([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      
+      loadDonorRequests()
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (tab && (tab === 'donor' || tab === 'victim')) {
@@ -152,43 +178,48 @@ export default function MyRequestsPage() {
     }
   }, [tab])
 
-  // Load victim requests (help requests) from API
+  // Load victim requests (help requests) from API (using JWT authentication)
   useEffect(() => {
-    if (userInfo) {
+    if (isAuthenticated) {
       const loadVictimRequests = async () => {
         try {
-          const response = await helpRequestService.getAllHelpRequests()
+          setLoading(true)
+          console.log('[MyRequestsPage] Loading my help requests...')
+          const response = await helpRequestService.getMyHelpRequests()
+          console.log('[MyRequestsPage] My help requests response:', response)
           if (response.success && response.data) {
-            // Filter help requests by current user's contact info
-            const userHelpRequests = response.data
-              .filter((req) => req.contact === userInfo.identifier)
-              .map((req): VictimRequest => {
-                const name = req.name || req.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request'
-                const peopleCount = req.totalPeople || (() => {
-                  const match = req.shortNote?.match(/People:\s*(\d+)/)
-                  return match ? parseInt(match[1]) : 1
-                })()
-                const items = req.rationItems && req.rationItems.length > 0
-                  ? req.rationItems.join(', ')
-                  : req.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
-                
-                return {
-                  id: req.id,
-                  title: name,
-                  location: req.approxArea || 'Unknown',
-                  category: HelpRequestCategory.OTHER, // Category not available in DTO, using default
-                  urgency: req.urgency,
-                  status: (req.status?.toLowerCase() as VictimRequest['status']) || 'pending',
-                  createdDate: req.createdAt ? new Date(req.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                  contact: req.contact || '',
-                  contactType: req.contactType || 'Phone',
-                  shortNote: req.shortNote || '',
-                  peopleCount,
-                  items,
-                }
-              })
+            const userHelpRequests = response.data.map((req): VictimRequest => {
+              const name = req.name || req.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request'
+              const peopleCount = req.totalPeople || 1
+              
+              // Convert rationItems array to readable string
+              const items = req.rationItems && req.rationItems.length > 0
+                ? req.rationItems.map((itemId) => {
+                    const item = RATION_ITEMS.find((i) => i.id === itemId)
+                    return item ? item.label : itemId
+                  }).join(', ')
+                : req.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
+              
+              return {
+                id: req.id,
+                title: name,
+                location: req.approxArea || 'Unknown',
+                category: HelpRequestCategory.OTHER, // Category not available in DTO
+                urgency: req.urgency,
+                status: (req.status?.toLowerCase() as VictimRequest['status']) || 'pending',
+                createdDate: req.createdAt ? new Date(req.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                contact: req.contact || '',
+                contactType: req.contactType || 'Phone',
+                shortNote: req.shortNote || '',
+                peopleCount,
+                items,
+              }
+            })
             
             setVictimRequests(userHelpRequests)
+          } else {
+            console.error('[MyRequestsPage] Failed to load help requests:', response.error)
+            setVictimRequests([])
           }
         } catch (error) {
           console.error('[MyRequestsPage] Error loading victim requests:', error)
@@ -200,65 +231,85 @@ export default function MyRequestsPage() {
       
       loadVictimRequests()
     }
-  }, [userInfo])
+  }, [isAuthenticated])
 
-  // Reload donations when switching to donor tab
+  // Reload donations when switching to donor tab (already loaded in first useEffect, but can refresh if needed)
   useEffect(() => {
-    if (activeTab === 'donor' && userInfo) {
-      const allDonations = JSON.parse(
-        localStorage.getItem('donations') || '[]'
-      )
-      const donationStatuses = JSON.parse(
-        localStorage.getItem('donation_statuses') || '{}'
-      )
-      
-      const userDonations = allDonations
-        .filter((donation: any) => 
-          donation.donorContact === userInfo.identifier ||
-          donation.donorName === userInfo.name ||
-          donation.donorName === userInfo.identifier
-        )
-        .map((donation: any) => {
-          const helpRequests = JSON.parse(
-            localStorage.getItem('help_requests') || '[]'
-          )
-          const relatedRequest = helpRequests.find((req: any) => req.id === donation.requestId)
-          
-          return {
-            id: donation.id,
-            requestId: donation.requestId || 0,
-            requestTitle: relatedRequest 
-              ? (relatedRequest.name || relatedRequest.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request')
-              : `Request #${donation.requestId || 'Unknown'}`,
-            location: relatedRequest?.approxArea || 'Unknown',
-            category: relatedRequest?.category || HelpRequestCategory.OTHER,
-            urgency: relatedRequest?.urgency || Urgency.MEDIUM,
-            status: (donationStatuses[donation.id] as DonorRequest['status']) || donation.status || 'pending',
-            donatedItems: donation.items || 'Various items',
-            donatedDate: donation.requestedDate || new Date().toISOString().split('T')[0],
-            contact: donation.donorContact,
-            contactType: donation.donorContactType,
-            shortNote: donation.message || '',
+    if (activeTab === 'donor' && isAuthenticated && donorRequests.length === 0 && !loading) {
+      // Only reload if we don't have data yet
+      const loadDonorRequests = async () => {
+        try {
+          const response = await donationService.getMyDonations()
+          if (response.success && response.data) {
+            const userDonations = response.data.map((donation): DonorRequest => {
+              const helpRequest = donation.helpRequest
+              
+              const itemsList = Object.entries(donation.rationItems || {})
+                .map(([itemId, quantity]) => {
+                  const item = RATION_ITEMS.find((i) => i.id === itemId)
+                  return item ? `${item.label} (${quantity})` : `${itemId} (${quantity})`
+                })
+                .join(', ') || 'Various items'
+              
+              let status: DonorRequest['status'] = 'pending'
+              if (donation.ownerMarkedCompleted) {
+                status = 'completed'
+              } else if (donation.donatorMarkedCompleted) {
+                status = 'in_progress'
+              } else if (donation.donatorMarkedScheduled) {
+                status = 'in_progress'
+              }
+              
+              return {
+                id: donation.id,
+                requestId: donation.helpRequestId,
+                requestTitle: helpRequest?.name || helpRequest?.shortNote?.split(',')[0]?.replace('Name:', '').trim() || `Request #${donation.helpRequestId}`,
+                location: helpRequest?.approxArea || 'Unknown',
+                category: HelpRequestCategory.OTHER,
+                urgency: helpRequest?.urgency || Urgency.MEDIUM,
+                status,
+                donatedItems: itemsList,
+                donatedDate: donation.createdAt ? new Date(donation.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                contact: helpRequest?.contact || '',
+                contactType: helpRequest?.contactType || 'Phone',
+                shortNote: helpRequest?.shortNote || '',
+              }
+            })
+            
+            setDonorRequests(userDonations)
           }
-        })
+        } catch (error) {
+          console.error('[MyRequestsPage] Error loading donor requests:', error)
+        }
+      }
       
-      setDonorRequests(userDonations)
+      loadDonorRequests()
     }
-  }, [activeTab, userInfo])
+  }, [activeTab, isAuthenticated, donorRequests.length, loading])
 
-  const handleMarkAsCompleted = (donationId: number) => {
-    const updatedRequests = donorRequests.map((request) =>
-      request.id === donationId ? { ...request, status: 'completed' as const } : request
-    )
-    setDonorRequests(updatedRequests)
+  const handleMarkAsCompleted = async (donationId: number) => {
+    // Find the donation to get helpRequestId
+    const donation = donorRequests.find((req) => req.id === donationId)
+    if (!donation) return
     
-    // Store in localStorage to sync with request details page
-    if (typeof window !== 'undefined') {
-      const donationStatuses = JSON.parse(
-        localStorage.getItem('donation_statuses') || '{}'
+    try {
+      // Mark as completed via API
+      const response = await donationService.markAsCompletedByDonator(
+        donation.requestId,
+        donationId
       )
-      donationStatuses[donationId] = 'completed'
-      localStorage.setItem('donation_statuses', JSON.stringify(donationStatuses))
+      
+      if (response.success) {
+        // Update local state
+        const updatedRequests = donorRequests.map((request) =>
+          request.id === donationId ? { ...request, status: 'completed' as const } : request
+        )
+        setDonorRequests(updatedRequests)
+      } else {
+        console.error('Failed to mark donation as completed:', response.error)
+      }
+    } catch (error) {
+      console.error('Error marking donation as completed:', error)
     }
   }
 
@@ -307,7 +358,7 @@ export default function MyRequestsPage() {
     }
   }
 
-  if (!userInfo) {
+  if (!isAuthenticated) {
     return null // Will redirect
   }
 

@@ -139,6 +139,24 @@ class HelpRequestService {
       };
     }
   }
+
+  /**
+   * Get authenticated user's help requests
+   */
+  public async getMyHelpRequests(): Promise<IApiResponse<HelpRequestWithOwnershipResponseDto[]>> {
+    try {
+      const response = await apiClient.get<IApiResponse<HelpRequestWithOwnershipResponseDto[]>>(
+        `${this.basePath}/my`
+      );
+      return response;
+    } catch (error) {
+      console.error('Error in HelpRequestService.getMyHelpRequests:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch my help requests',
+      };
+    }
+  }
 }
 
 // Export singleton instance
