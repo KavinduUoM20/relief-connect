@@ -237,14 +237,18 @@ class ApiClient {
         }
         
         console.error('[API Client] Error data:', errorData);
+        console.error('[API Client] Error data.details:', errorData.details);
+        console.error('[API Client] Error data type:', typeof errorData.details);
         
         // Create error with full details
         const error = new Error(errorData.error || `HTTP error! status: ${response.status}`) as Error & {
           details?: unknown;
           status?: number;
+          errorData?: unknown;
         };
         error.details = errorData.details;
         error.status = response.status;
+        error.errorData = errorData; // Store full error data for debugging
         throw error;
       }
 

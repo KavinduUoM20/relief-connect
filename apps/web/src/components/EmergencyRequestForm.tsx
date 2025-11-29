@@ -165,17 +165,25 @@ export default function EmergencyRequestForm({
         .join(', ')
 
       const specialNeedsText = formData.specialNeeds.trim()
-        ? ` Special Needs: ${formData.specialNeeds}`
+        ? ` Special Needs: ${formData.specialNeeds.trim()}`
         : ''
+
+      // Build shortNote: prioritize user notes, then items list, then fallback
+      // Ensure it's always at least 1 character (required by backend)
+      let shortNote = formData.notes.trim()
+      
+      if (!shortNote) {
+        // If no notes, build from items and special needs
+        const itemsText = rationItemsList ? `Items: ${rationItemsList}` : ''
+        const combinedText = `${itemsText}${specialNeedsText}`.trim()
+        shortNote = combinedText || 'Help request'
+      }
 
       const helpRequestData: ICreateHelpRequest = {
         lat: formData.gpsLocation.lat,
         lng: formData.gpsLocation.lng,
         urgency: formData.urgent ? Urgency.HIGH : Urgency.MEDIUM,
-        shortNote:
-          formData.notes ||
-          `Items: ${rationItemsList}${specialNeedsText}`.trim() ||
-          'Help request',
+        shortNote: shortNote,
         approxArea: `${formData.gpsLocation.lat}, ${formData.gpsLocation.lng}`,
         contactType: ContactType.PHONE,
         contact: formData.contactNumber,
@@ -188,6 +196,17 @@ export default function EmergencyRequestForm({
         // Ration items as structured array
         rationItems: selectedRationItemIds.length > 0 ? selectedRationItemIds : undefined,
       }
+
+      console.log('[EmergencyRequestForm] Submitting help request data:', JSON.stringify(helpRequestData, null, 2))
+      console.log('[EmergencyRequestForm] Data validation check:', {
+        lat: typeof helpRequestData.lat === 'number' && !isNaN(helpRequestData.lat),
+        lng: typeof helpRequestData.lng === 'number' && !isNaN(helpRequestData.lng),
+        urgency: helpRequestData.urgency,
+        shortNote: helpRequestData.shortNote?.length,
+        approxArea: helpRequestData.approxArea?.length,
+        contactType: helpRequestData.contactType,
+        contact: helpRequestData.contact,
+      })
 
       const response = await onSubmit(helpRequestData)
 

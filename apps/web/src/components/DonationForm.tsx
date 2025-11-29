@@ -129,41 +129,34 @@ export default function DonationForm({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      <main className="w-full max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mt-8 mb-8 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-
-          <div className="text-sm text-gray-600">
-            <span className="cursor-pointer hover:text-gray-900" onClick={() => router.push('/')}>
-              Home
-            </span>
-            <span className="mx-2">/</span>
-            <span>Make a Donation</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Header - Matching Request Details Page */}
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Make a Donation</h1>
+            <div className="w-20"></div>
           </div>
         </div>
+      </div>
 
+      <main className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Title */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-            Make a donation to <span className="text-blue-600">{userName}</span>
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            Donating to <span className="text-blue-600">{userName}</span>
+          </h2>
+          <p className="text-base md:text-lg text-gray-600">
             Help meet urgent needs in the community
           </p>
         </div>
 
         {/* ---------- MAIN CARD WRAPPER ---------- */}
-        <Card className="border border-gray-200 shadow-sm rounded-2xl bg-white p-8">
+        <Card className="shadow-lg rounded-xl bg-white p-6 md:p-8">
           {/* ------- STEP 0 - Donor Details ------- */}
           {currentStep === 0 && (
             <>
@@ -280,7 +273,7 @@ export default function DonationForm({
               </div>
 
               {/* Pagination */}
-              <div className="mt-10 flex items-center justify-center gap-6">
+              <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-600">Step 1 of 3</span>
                 <Button
                   onClick={() => {
@@ -290,7 +283,7 @@ export default function DonationForm({
                       alert('Please fill in all required fields')
                     }
                   }}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={!donorName || !donorContact}
                 >
                   Next
@@ -397,7 +390,7 @@ export default function DonationForm({
               </div>
 
               {/* Pagination */}
-              <div className="mt-10 flex items-center justify-center gap-6">
+              <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(0)}
@@ -414,7 +407,7 @@ export default function DonationForm({
                       alert('Please select at least one item to donate')
                     }
                   }}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={totalItems === 0}
                 >
                   Next
@@ -484,28 +477,36 @@ export default function DonationForm({
 
                 {/* Right Column */}
                 <div>
-                  <Card className="border border-gray-100 bg-white shadow-sm rounded-xl sticky top-6">
+                  <Card className="bg-white shadow-lg rounded-xl sticky top-24 border border-gray-200">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold">Request Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">Foods</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">Foods</p>
                         <p className="font-semibold text-gray-900 mt-1">
                           {requestDetails.foods.join(', ')}
                         </p>
                       </div>
 
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">When Needed</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">When Needed</p>
                         <p className="font-semibold text-gray-900 mt-1">
                           {requestDetails.whenNeeded}
                         </p>
                       </div>
 
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">Urgency</p>
-                        <p className="font-semibold text-gray-900 mt-1">{requestDetails.urgency}</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">Urgency</p>
+                        <p className={`font-semibold mt-1 ${
+                          requestDetails.urgency === 'High' 
+                            ? 'text-red-700' 
+                            : requestDetails.urgency === 'Medium'
+                            ? 'text-orange-700'
+                            : 'text-green-700'
+                        }`}>
+                          {requestDetails.urgency}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -513,7 +514,7 @@ export default function DonationForm({
               </div>
 
               {/* Pagination */}
-              <div className="mt-10 flex items-center justify-center gap-6">
+              <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(1)}
@@ -521,13 +522,11 @@ export default function DonationForm({
                 >
                   Prev
                 </Button>
-                <div className="flex-1 flex items-center justify-center">
-                  <span className="text-sm font-medium text-gray-600">Step 3 of 3</span>
-                </div>
+                <span className="text-sm font-medium text-gray-600">Step 3 of 3</span>
                 <Button
                   onClick={handleMakeDonation}
                   disabled={totalItems === 0}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white"
                 >
                   Make Donation
                 </Button>
