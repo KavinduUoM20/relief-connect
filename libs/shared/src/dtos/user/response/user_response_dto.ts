@@ -8,6 +8,7 @@ import { UserRole, UserStatus } from '../../../enums';
 export class UserResponseDto implements Omit<IUser, 'password'> {
   id: number;
   username: string;
+  contactNumber?: string;
   role: UserRole;
   status: UserStatus;
   createdAt?: Date;
@@ -16,6 +17,7 @@ export class UserResponseDto implements Omit<IUser, 'password'> {
   constructor(user: IUser) {
     this.id = user.id!;
     this.username = user.username;
+    this.contactNumber = user.contactNumber;
     this.role = user.role;
     this.status = user.status;
     this.createdAt = user.createdAt;

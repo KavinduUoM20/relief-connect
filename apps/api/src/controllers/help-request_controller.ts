@@ -48,6 +48,30 @@ class HelpRequestController {
   };
 
   /**
+   * GET /api/help-requests/:id
+   * Get a single help request by ID
+   */
+  getHelpRequestById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        res.sendError('Invalid help request ID', 400);
+        return;
+      }
+
+      const result = await this.helpRequestService.getHelpRequestById(id);
+
+      if (result.success && result.data) {
+        res.sendSuccess(result.data, result.message, 200);
+      } else {
+        res.sendError(result.error || 'Help request not found', 404);
+      }
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * POST /api/help-requests
    * Create a new help request
    * Requires authentication - tracks which user created the request

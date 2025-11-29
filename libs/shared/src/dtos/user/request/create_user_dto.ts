@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, Length, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, Length, MinLength, Matches } from 'class-validator';
 import { BaseDto } from '../../common/base_dto';
 import { IBodyDto } from '../../../interfaces';
 import { ICreateUserRequest } from '../../../interfaces/user/ICreateUserRequest';
@@ -20,11 +20,18 @@ export class CreateUserDto extends BaseDto implements IBodyDto, ICreateUserReque
   @MinLength(6, { message: 'Password must be at least 6 characters if provided' })
   password?: string;
 
+  @IsString({ message: 'Contact number must be a string' })
+  @IsOptional()
+  @Length(8, 20, { message: 'Contact number must be between 8 and 20 characters' })
+  @Matches(/^[\d\s\-\+\(\)]+$/, { message: 'Contact number must contain only digits, spaces, hyphens, plus signs, and parentheses' })
+  contactNumber?: string;
+
   constructor(data?: Partial<ICreateUserRequest>) {
     super();
     if (data) {
       this.username = data.username || '';
       this.password = data.password;
+      this.contactNumber = data.contactNumber;
     }
   }
 }

@@ -18,6 +18,7 @@ import {
   Heart,
   Filter,
   ArrowLeft,
+  HandHeart,
 } from 'lucide-react'
 import {
   SRI_LANKA_PROVINCES,
@@ -25,6 +26,7 @@ import {
   DISTRICT_COORDINATES,
 } from '../data/sri-lanka-locations'
 import { helpRequestService } from '../services'
+import DonationInteractionModal from '../components/DonationInteractionModal'
 
 export default function RequestsPage() {
   const router = useRouter()
@@ -44,6 +46,8 @@ export default function RequestsPage() {
     emergencyLevel?: Urgency
     type?: 'individual' | 'group'
   }>({})
+  const [selectedRequest, setSelectedRequest] = useState<HelpRequestResponseDto | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined)
 
   // Use requests as-is (coordinates should come from API)
   const requestsWithMockCoords = useMemo(() => {
@@ -70,6 +74,35 @@ export default function RequestsPage() {
       }
     }
     loadData()
+  }, [])
+
+  // Get current user ID from API if authenticated
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        // Check if user has access token
+        if (typeof window !== 'undefined') {
+          const accessToken = localStorage.getItem('accessToken')
+          if (accessToken) {
+            // Try to get current user from API
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/users/me`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+              },
+            })
+            if (response.ok) {
+              const data = await response.json()
+              if (data.success && data.data && data.data.id) {
+                setCurrentUserId(data.data.id)
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[RequestsPage] Error getting current user:', error)
+      }
+    }
+    getCurrentUser()
   }, [])
 
   const filteredRequests = useMemo(() => {
@@ -464,25 +497,35 @@ export default function RequestsPage() {
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <Users className="h-4 w-4 text-blue-600" />
                           <span className="font-medium">
-                            {request.shortNote?.match(/People:\s*(\d+)/)?.[1] || '1'} people
+                            {request.totalPeople || request.shortNote?.match(/People:\s*(\d+)/)?.[1] || '1'} people
                           </span>
-                          {request.shortNote?.match(/Kids:\s*(\d+)/)?.[1] && (
+                          {request.children && (
                             <span className="text-gray-500">
-                              ({request.shortNote.match(/Kids:\s*(\d+)/)?.[1]} kids)
+                              ({request.children} kids)
                             </span>
                           )}
-                          {request.shortNote?.match(/Elders:\s*(\d+)/)?.[1] && (
+                          {request.elders && (
                             <span className="text-gray-500">
-                              ({request.shortNote.match(/Elders:\s*(\d+)/)?.[1]} elders)
+                              ({request.elders} elders)
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <Package className="h-4 w-4 text-purple-600" />
                           <span className="line-clamp-1">
-                            {request.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'}
+                            {request.rationItems?.join(', ') || request.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'}
                           </span>
                         </div>
+                      </div>
+                      <div className="pt-2">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setSelectedRequest(request)}
+                        >
+                          <HandHeart className="h-4 w-4 mr-2" />
+                          Donate
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -492,6 +535,17 @@ export default function RequestsPage() {
           )}
         </div>
       </div>
+
+      {/* Donation Modal */}
+      {selectedRequest && (
+        <DonationInteractionModal
+          helpRequest={selectedRequest}
+          isOpen={!!selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          currentUserId={currentUserId}
+          isOwner={currentUserId === selectedRequest.userId}
+        />
+      )}
     </>
   )
 }

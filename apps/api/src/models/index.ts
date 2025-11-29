@@ -10,6 +10,7 @@ import HelpRequestModel from './help-request.model';
 import CampModel from './camp.model';
 import UserModel from './user.model';
 import RefreshTokenModel from './refresh-token.model';
+import DonationModel from './donation.model';
 
 /**
  * Initialize model associations here
@@ -34,6 +35,22 @@ export const initializeAssociations = (): void => {
     foreignKey: HelpRequestModel.HELP_REQUEST_USER_ID, 
     as: 'helpRequests' 
   });
+
+  // User-Donation association (donator)
+  // The @BelongsTo decorator in DonationModel already creates the belongsTo side,
+  // so we only need to set up the hasMany side here
+  UserModel.hasMany(DonationModel, { 
+    foreignKey: DonationModel.DONATION_DONATOR_ID, 
+    as: 'donations' 
+  });
+
+  // HelpRequest-Donation association
+  // The @BelongsTo decorator in DonationModel already creates the belongsTo side,
+  // so we only need to set up the hasMany side here
+  HelpRequestModel.hasMany(DonationModel, { 
+    foreignKey: DonationModel.DONATION_HELP_REQUEST_ID, 
+    as: 'donations' 
+  });
 };
 
 // Export individual models (constants are accessible via ItemModel.TABLE_NAME, etc.)
@@ -42,6 +59,7 @@ export { default as HelpRequestModel } from './help-request.model';
 export { default as CampModel } from './camp.model';
 export { default as UserModel } from './user.model';
 export { default as RefreshTokenModel } from './refresh-token.model';
+export { default as DonationModel } from './donation.model';
 
 // Export sequelize instance
 export { sequelize };
@@ -53,6 +71,7 @@ export const models = {
   Camp: CampModel,
   User: UserModel,
   RefreshToken: RefreshTokenModel,
+  Donation: DonationModel,
   // Add more models here
 };
 

@@ -6,5 +6,6 @@
 export interface ICreateUserRequest {
   username: string;
   password?: string; // Optional - users can register without password
+  contactNumber?: string; // Optional - contact number for verification and communication
 }
 

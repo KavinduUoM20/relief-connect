@@ -12,6 +12,7 @@ export default class UserModel extends Model<IUser> implements IUser {
   public static readonly USER_ID = 'id';
   public static readonly USER_USERNAME = 'username';
   public static readonly USER_PASSWORD = 'password';
+  public static readonly USER_CONTACT_NUMBER = 'contactNumber';
   public static readonly USER_ROLE = 'role';
   public static readonly USER_STATUS = 'status';
   public static readonly USER_CREATED_AT = 'createdAt';
@@ -46,6 +47,13 @@ export default class UserModel extends Model<IUser> implements IUser {
     field: UserModel.USER_PASSWORD,
   })
   password?: string;
+
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: true,
+    field: UserModel.USER_CONTACT_NUMBER,
+  })
+  contactNumber?: string;
 
   @Column({
     type: DataType.STRING(20),

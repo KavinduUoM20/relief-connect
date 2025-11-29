@@ -65,6 +65,7 @@ class UserDao {
       const user = await UserModel.create({
         [UserModel.USER_USERNAME]: createUserDto.username,
         [UserModel.USER_PASSWORD]: hashedPassword,
+        [UserModel.USER_CONTACT_NUMBER]: createUserDto.contactNumber?.trim(),
         [UserModel.USER_ROLE]: role,
         [UserModel.USER_STATUS]: UserStatus.ACTIVE,
       });
