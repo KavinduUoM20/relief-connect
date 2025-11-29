@@ -789,14 +789,16 @@ export default function LandingPage() {
                 {filteredRequests.map((request) => {
                   // Use real data from API response fields
                   const name = request.name || request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
-                  const peopleCount = request.totalPeople || request.shortNote?.match(/People:\s*(\d+)/)?.[1] || '1'
+                  const peopleCount =
+                    request.totalPeople || request.shortNote?.match(/People:\s*(\d+)/)?.[1] || '1'
                   const kidsCount = request.children || request.shortNote?.match(/Kids:\s*(\d+)/)?.[1] || '0'
                   const eldersCount = request.elders || request.shortNote?.match(/Elders:\s*(\d+)/)?.[1] || '0'
                   // Use rationItems if available, otherwise parse from shortNote
                   const items = request.rationItems && request.rationItems.length > 0
                     ? request.rationItems.join(', ')
                     : request.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
-                  const requestType = request.shortNote?.includes('Camp') ? 'Camp' : 'Family'
+                  const peopleCountNumber = Number(peopleCount) || 0
+                  const requestType = peopleCountNumber <= 1 ? 'Individual' : 'Group'
 
                   return (
                     <Card
@@ -833,17 +835,29 @@ export default function LandingPage() {
                             </div>
                           </div>
 
-                          {/* Location */}
+                          {/* Location (single clickable link to Google Maps) */}
                           <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
                             <MapPin className="h-4 w-4 text-red-500 flex-shrink-0" />
-                            <span className="font-medium truncate">
-                              {request.approxArea || 'Unknown location'}
-                            </span>
-                            {request.lat != null && request.lng != null && (
-                              <span className="text-xs text-gray-500 ml-auto">
-                                {Number(request.lat).toFixed(6)}, {Number(request.lng).toFixed(6)}
-                              </span>
-                            )}
+                            <div className="flex flex-col flex-1 min-w-0">
+                              {request.lat != null && request.lng != null ? (
+                                <a
+                                  href={`https://www.google.com/maps?q=${encodeURIComponent(
+                                    `${Number(request.lat)},${Number(request.lng)}`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-blue-600 hover:underline truncate"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {request.approxArea ||
+                                    `${Number(request.lat).toFixed(6)}, ${Number(request.lng).toFixed(6)}`}
+                                </a>
+                              ) : (
+                                <span className="font-medium truncate">
+                                  {request.approxArea || 'Unknown location'}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           {/* People Details */}

@@ -71,9 +71,33 @@ class HelpRequestService {
       return response;
     } catch (error) {
       console.error('[HelpRequestService] Error creating help request:', error);
+
+      // Try to extract validation error details from API client error
+      if (error instanceof Error) {
+        const anyErr = error as Error & { details?: unknown };
+        let message = error.message || 'Failed to create help request';
+
+        if (anyErr.details && Array.isArray(anyErr.details)) {
+          // Backend validation middleware sends an array of { field, constraints }
+          const first = anyErr.details[0] as {
+            field?: string;
+            constraints?: Record<string, string>;
+          };
+          const constraintMessages = first?.constraints ? Object.values(first.constraints) : [];
+          if (constraintMessages.length > 0) {
+            message = constraintMessages[0];
+          }
+        }
+
+        return {
+          success: false,
+          error: message,
+        };
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create help request',
+        error: 'Failed to create help request',
       };
     }
   }
