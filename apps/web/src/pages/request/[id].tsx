@@ -63,7 +63,6 @@ export default function RequestDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
-  const [userInfo, setUserInfo] = useState<{ name?: string; identifier?: string } | null>(null)
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined)
   const [donationRequests, setDonationRequests] = useState<DonationRequest[]>([])
   const [loadingDonations, setLoadingDonations] = useState(false)
@@ -108,7 +107,7 @@ export default function RequestDetailsPage() {
               return {
                 id: donation.id,
                 donatorId: donation.donatorId,
-                donorName: donation.donatorName || donation.donatorUsername || 'Anonymous',
+                donorName: donation.donatorName || 'Anonymous',
                 donorContact: donation.donatorMobileNumber || 'N/A',
                 donorContactType: donation.donatorMobileNumber ? 'Phone' : 'Email',
                 items: itemsList || 'Various items',
@@ -136,24 +135,6 @@ export default function RequestDetailsPage() {
     }
   }, [id])
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const donorUser = localStorage.getItem('donor_user')
-      if (donorUser) {
-        try {
-          const user = JSON.parse(donorUser)
-          if (user.loggedIn && user.identifier) {
-            setUserInfo({
-              name: user.name || user.identifier,
-              identifier: user.identifier || user.phone || user.email,
-            })
-          }
-        } catch (e) {
-          // Invalid data
-        }
-      }
-    }
-  }, [])
 
   // Get current user ID from API if authenticated
   useEffect(() => {
@@ -713,7 +694,7 @@ export default function RequestDetailsPage() {
                       return {
                         id: donation.id,
                         donatorId: donation.donatorId,
-                        donorName: donation.donatorName || donation.donatorUsername || 'Anonymous',
+                        donorName: donation.donatorName || 'Anonymous',
                         donorContact: donation.donatorMobileNumber || 'N/A',
                         donorContactType: donation.donatorMobileNumber ? 'Phone' : 'Email',
                         items: itemsList || 'Various items',

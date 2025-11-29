@@ -1,5 +1,4 @@
 import { IDonation } from '../../../interfaces/donation/IDonation';
-import { IUser } from '../../../interfaces/user/IUser';
 
 /**
  * Extended DTO for donation response that includes donator information
@@ -12,7 +11,7 @@ export class DonationWithDonatorResponseDto {
   helpRequestId: number;
   donatorId: number;
   donatorUsername?: string;
-  donatorName?: string; // Only included if requester is owner or donator
+  donatorName: string; // Always included - stored directly in donation
   donatorMobileNumber?: string; // Only included if requester is owner or donator
   rationItems: Record<string, number>;
   donatorMarkedScheduled: boolean;
@@ -28,10 +27,10 @@ export class DonationWithDonatorResponseDto {
     this.id = donation.id!;
     this.helpRequestId = donation.helpRequestId;
     this.donatorId = donation.donatorId;
-    this.donatorUsername = donation.donator?.username;
-    // Show contact info only if requester is owner or donator
+    this.donatorName = donation.donatorName; // Always include name
+    //this.donatorUsername = donation.donator?.username; // Include username as fallback
+    // Show mobile number only if requester is owner or donator
     if (showContactInfo) {
-      this.donatorName = donation.donatorName;
       this.donatorMobileNumber = donation.donatorMobileNumber;
     }
     this.rationItems = donation.rationItems;
