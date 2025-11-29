@@ -314,13 +314,10 @@ export default function LandingPage() {
       return sum
     }, 0)
 
-    const donationsDone = Math.floor(totalRequests * 0.6)
-
     return {
       totalRequests,
       totalPeople,
       totalRations,
-      donationsDone,
     }
   }, [helpRequests])
 
@@ -369,8 +366,6 @@ export default function LandingPage() {
       // Meals needed PER DAY (not for multiple days)
       const totalMealsNeeded = totalPeopleFromSummary * mealsPerPersonPerDay
 
-      const donationsDone = summary.byStatus?.CLOSED || 0
-
       return {
         totalRequests: summary.total || 0,
         totalPeople: totalPeopleFromSummary,
@@ -380,7 +375,6 @@ export default function LandingPage() {
         // totalRations is only used in charts, not the top cards
         // Now calculated on backend - total number of unique ration item types
         totalRations: summary.totalRationItemTypes || 0,
-        donationsDone,
         primaryLocation: 'All Locations',
       }
     }
@@ -426,8 +420,6 @@ export default function LandingPage() {
       return sum
     }, 0)
 
-    const donationsDone = Math.floor(totalRequests * 0.6)
-
     const locations = filteredRequests.reduce(
       (acc, req) => {
         const location = req.approxArea || 'Unknown'
@@ -447,7 +439,6 @@ export default function LandingPage() {
       totalElders,
       totalMealsNeeded,
       totalRations,
-      donationsDone,
       primaryLocation,
     }
   }, [filteredRequests, summary, selectedLevel, userLocation])
@@ -710,17 +701,6 @@ export default function LandingPage() {
                     </div>
                     <div className="text-2xl font-bold text-pink-900">
                       {requestsAnalytics.totalElders}
-                    </div>
-                  </div>
-                  <div className="bg-teal-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Heart className="h-4 w-4 text-teal-600" />
-                      <span className="text-xs font-medium text-teal-600">
-                        {t('donationsDone')}
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-teal-900">
-                      {requestsAnalytics.donationsDone}
                     </div>
                   </div>
                 </div>

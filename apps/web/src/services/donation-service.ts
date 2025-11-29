@@ -3,6 +3,7 @@ import { IApiResponse } from '@nx-mono-repo-deployment-test/shared/src/interface
 import { ICreateDonation } from '@nx-mono-repo-deployment-test/shared/src/interfaces/donation/ICreateDonation';
 import { DonationWithDonatorResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/donation/response/donation_with_donator_response_dto';
 import { DonationResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/donation/response/donation_response_dto';
+import { DonationWithHelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/donation/response/donation_with_help_request_response_dto';
 
 /**
  * Donation Service
@@ -154,6 +155,24 @@ class DonationService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to mark donation as completed',
+      };
+    }
+  }
+
+  /**
+   * Get authenticated user's donations
+   */
+  public async getMyDonations(): Promise<IApiResponse<DonationWithHelpRequestResponseDto[]>> {
+    try {
+      const response = await apiClient.get<IApiResponse<DonationWithHelpRequestResponseDto[]>>(
+        `${this.basePath}/my/donations`
+      );
+      return response;
+    } catch (error) {
+      console.error('Error in DonationService.getMyDonations:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch my donations',
       };
     }
   }
