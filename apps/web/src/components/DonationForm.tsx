@@ -238,19 +238,19 @@ export default function DonationForm({
 
                 {/* Right Column - Request Summary */}
                 <div>
-                  <Card className="border border-gray-100 bg-white shadow-sm rounded-xl sticky top-6">
+                  <Card className="bg-white shadow-lg rounded-xl sticky top-24 border border-gray-200">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold">Request Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">
                           Requested By
                         </p>
                         <p className="font-semibold text-gray-900 mt-1">{userName}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">
                           Items Needed
                         </p>
                         <p className="font-semibold text-gray-900 mt-1">
@@ -258,14 +258,22 @@ export default function DonationForm({
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">When Needed</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">When Needed</p>
                         <p className="font-semibold text-gray-900 mt-1">
                           {requestDetails.whenNeeded}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">Urgency</p>
-                        <p className="font-semibold text-gray-900 mt-1">{requestDetails.urgency}</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">Urgency</p>
+                        <p className={`font-semibold mt-1 ${
+                          requestDetails.urgency === 'High' 
+                            ? 'text-red-700' 
+                            : requestDetails.urgency === 'Medium'
+                            ? 'text-orange-700'
+                            : 'text-green-700'
+                        }`}>
+                          {requestDetails.urgency}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -308,38 +316,34 @@ export default function DonationForm({
                   <div className="space-y-6">
                     {Array.from(new Set(donations.map((d) => d.category))).map((category) => (
                       <div key={category}>
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{category}</h3>
-
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           {donations
                             .filter((d) => d.category === category)
                             .map((item) => (
                               <Card
                                 key={item.id}
-                                className="border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-all rounded-xl"
+                                className="border border-gray-200 bg-white hover:shadow-md transition-all rounded-xl"
                               >
                                 <CardContent className="p-4">
                                   <div className="mb-4 flex flex-col">
-                                    <p className="text-sm font-medium text-gray-600">
-                                      {item.category}
-                                    </p>
                                     <p className="text-base font-semibold text-gray-900">
                                       {item.name}
                                     </p>
                                   </div>
 
                                   {/* Quantity Selector */}
-                                  <div className="flex items-center justify-between gap-3 rounded-md bg-white p-3 border border-gray-200">
+                                  <div className="flex items-center justify-between gap-3 rounded-md bg-gray-50 p-3 border border-gray-200">
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => updateQuantity(item.id, -1)}
-                                      className="h-8 w-8 p-0"
+                                      disabled={item.quantity === 0}
+                                      className="h-9 w-9 p-0 rounded-full border-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       <Minus className="h-4 w-4" />
                                     </Button>
 
-                                    <span className="w-8 text-center font-bold text-gray-900">
+                                    <span className="min-w-[2rem] text-center font-bold text-lg text-gray-900">
                                       {item.quantity}
                                     </span>
 
@@ -347,7 +351,7 @@ export default function DonationForm({
                                       variant="outline"
                                       size="sm"
                                       onClick={() => updateQuantity(item.id, 1)}
-                                      className="h-8 w-8 p-0"
+                                      className="h-9 w-9 p-0 rounded-full border-2 hover:bg-gray-100"
                                     >
                                       <Plus className="h-4 w-4" />
                                     </Button>
@@ -363,26 +367,34 @@ export default function DonationForm({
 
                 {/* Right Column - Request Summary */}
                 <div>
-                  <Card className="border border-gray-100 bg-white shadow-sm rounded-xl sticky top-6">
+                  <Card className="bg-white shadow-lg rounded-xl sticky top-24 border border-gray-200">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold">Request Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">Foods</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">Items Needed</p>
                         <p className="font-semibold text-gray-900 mt-1">
                           {requestDetails.foods.join(', ')}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">When Needed</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">When Needed</p>
                         <p className="font-semibold text-gray-900 mt-1">
                           {requestDetails.whenNeeded}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-xs uppercase tracking-wide">Urgency</p>
-                        <p className="font-semibold text-gray-900 mt-1">{requestDetails.urgency}</p>
+                        <p className="text-gray-600 text-xs uppercase tracking-wide font-medium">Urgency</p>
+                        <p className={`font-semibold mt-1 ${
+                          requestDetails.urgency === 'High' 
+                            ? 'text-red-700' 
+                            : requestDetails.urgency === 'Medium'
+                            ? 'text-orange-700'
+                            : 'text-green-700'
+                        }`}>
+                          {requestDetails.urgency}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -446,7 +458,7 @@ export default function DonationForm({
                       .map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4 hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 hover:shadow-md transition-all"
                         >
                           <div>
                             <p className="text-sm text-gray-600">{item.category}</p>

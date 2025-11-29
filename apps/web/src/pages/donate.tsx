@@ -4,12 +4,69 @@ import { useRouter } from 'next/router'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import DonationForm from '../components/DonationForm'
 import { HelpRequestCategory, Urgency } from '@nx-mono-repo-deployment-test/shared/src/enums'
+import { RATION_ITEMS } from '../components/EmergencyRequestForm'
 
 export default function DonatePage() {
   const router = useRouter()
-  const { requestId, userName, category, urgency, items, location } = router.query
+  const { requestId, userName, category, urgency, items, location, rationItems } = router.query
 
-  // Parse items from the request
+  // Parse rationItems from query - can be comma-separated string of item IDs
+  const parseRationItems = (): string[] => {
+    if (rationItems) {
+      // If rationItems is a string, split by comma
+      if (typeof rationItems === 'string') {
+        return rationItems.split(',').map(id => id.trim()).filter(Boolean)
+      }
+      // If it's an array
+      if (Array.isArray(rationItems)) {
+        return rationItems.map(id => String(id).trim()).filter(Boolean)
+      }
+    }
+    // Fallback: try to parse from items string (old format)
+    if (items && typeof items === 'string' && items.trim()) {
+      // Try to match ration item IDs from the items string
+      const itemIds: string[] = []
+      RATION_ITEMS.forEach(rationItem => {
+        if (items.toLowerCase().includes(rationItem.label.toLowerCase()) || 
+            items.toLowerCase().includes(rationItem.id.toLowerCase())) {
+          itemIds.push(rationItem.id)
+        }
+      })
+      return itemIds
+    }
+    return []
+  }
+
+  // Get donation items from rationItems - map RATION_ITEMS to donation items
+  const getDonationItemsFromRationItems = (rationItemIds: string[]) => {
+    if (rationItemIds.length === 0) {
+      // If no ration items, show all items as fallback
+      return RATION_ITEMS.map((item) => ({
+        id: item.id,
+        name: item.label,
+        category: 'Items Needed',
+        quantity: 0,
+      }))
+    }
+
+    // Map ration item IDs to donation items
+    return rationItemIds
+      .map((itemId) => {
+        const rationItem = RATION_ITEMS.find((item) => item.id === itemId)
+        if (rationItem) {
+          return {
+            id: rationItem.id,
+            name: rationItem.label,
+            category: 'Items Needed',
+            quantity: 0,
+          }
+        }
+        return null
+      })
+      .filter((item): item is { id: string; name: string; category: string; quantity: number } => item !== null)
+  }
+
+  // Parse items for display in request summary
   const parseRequestItems = (itemsString: string): string[] => {
     if (!itemsString) return []
     // Parse items like "Food & Water (3), Torch (2), Medicine (1)"
@@ -30,73 +87,17 @@ export default function DonatePage() {
     return itemsList
   }
 
-  // Map request category to donation items
-  const getDonationItemsForCategory = (cat: string) => {
-    const parsedItems = parseRequestItems(items as string)
-    
-    // Base items based on category
-    const categoryItems: Record<string, Array<{ id: string; name: string; category: string }>> = {
-      [HelpRequestCategory.FOOD_WATER]: [
-        { id: '1', name: 'Clean Drinking Water', category: 'Essential Food & Water' },
-        { id: '2', name: 'Ready-to-eat Packs', category: 'Essential Food & Water' },
-        { id: '3', name: 'Canned Goods', category: 'Essential Food & Water' },
-        { id: '4', name: 'Rice & Grain', category: 'Essential Food & Water' },
-        { id: '5', name: 'Baby Formula', category: 'Essential Food & Water' },
-        { id: '6', name: 'Dry Food Items', category: 'Essential Food & Water' },
-      ],
-      [HelpRequestCategory.MEDICAL]: [
-        { id: '7', name: 'First Aid Kits', category: 'Medical Supplies' },
-        { id: '8', name: 'Prescription Medicine', category: 'Medical Supplies' },
-        { id: '9', name: 'Bandages & Dressings', category: 'Medical Supplies' },
-        { id: '10', name: 'Antiseptics', category: 'Medical Supplies' },
-        { id: '11', name: 'Pain Relievers', category: 'Medical Supplies' },
-        { id: '12', name: 'Medical Equipment', category: 'Medical Supplies' },
-      ],
-      [HelpRequestCategory.SHELTER]: [
-        { id: '13', name: 'Tents', category: 'Shelter & Housing' },
-        { id: '14', name: 'Sleeping Bags', category: 'Shelter & Housing' },
-        { id: '15', name: 'Blankets', category: 'Shelter & Housing' },
-        { id: '16', name: 'Tarpaulins', category: 'Shelter & Housing' },
-        { id: '17', name: 'Mattresses', category: 'Shelter & Housing' },
-        { id: '18', name: 'Pillows', category: 'Shelter & Housing' },
-      ],
-      [HelpRequestCategory.RESCUE]: [
-        { id: '19', name: 'Flashlights/Torches', category: 'Rescue Equipment' },
-        { id: '20', name: 'Batteries', category: 'Rescue Equipment' },
-        { id: '21', name: 'Ropes', category: 'Rescue Equipment' },
-        { id: '22', name: 'Tools', category: 'Rescue Equipment' },
-        { id: '23', name: 'Communication Devices', category: 'Rescue Equipment' },
-      ],
-    }
-
-    // Get base items for category
-    let donationItems = categoryItems[cat] || categoryItems[HelpRequestCategory.FOOD_WATER]
-
-    // If parsed items exist, prioritize matching items
-    if (parsedItems.length > 0) {
-      const matchedItems = donationItems.filter((item) =>
-        parsedItems.some((parsed) =>
-          item.name.toLowerCase().includes(parsed.toLowerCase()) ||
-          parsed.toLowerCase().includes(item.name.toLowerCase())
-        )
-      )
-      if (matchedItems.length > 0) {
-        donationItems = matchedItems
-      }
-    }
-
-    return donationItems.map((item) => ({
-      ...item,
-      quantity: 0,
-    }))
-  }
+  const rationItemIds = parseRationItems()
+  const parsedItems = items && (items as string).trim() 
+    ? parseRequestItems(items as string) 
+    : []
 
   const requestDetails = {
     userName: (userName as string) || 'Anonymous',
     category: (category as string) || HelpRequestCategory.FOOD_WATER,
     urgency: (urgency as string) || Urgency.MEDIUM,
     location: (location as string) || 'Unknown',
-    items: parseRequestItems(items as string),
+    items: parsedItems,
     whenNeeded: 'As soon as possible',
   }
 
@@ -113,7 +114,7 @@ export default function DonatePage() {
           whenNeeded: requestDetails.whenNeeded,
           urgency: requestDetails.urgency,
         }}
-        donationItems={getDonationItemsForCategory(requestDetails.category)}
+        donationItems={getDonationItemsFromRationItems(rationItemIds)}
         requestId={requestId as string}
       />
     </>

@@ -162,16 +162,41 @@ export default function RequestDetailsPage() {
 
   const handleDonate = () => {
     if (!request) return
-    const requestName = request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
+    
+    // Get request name - use name field first, then parse from shortNote
+    const requestName = request.name || request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
+    
+    // Build items string from rationItems array if available, otherwise parse from shortNote
+    let itemsString = ''
+    if (request.rationItems && request.rationItems.length > 0) {
+      itemsString = request.rationItems
+        .map((itemId) => {
+          const meta = RATION_ITEMS.find((item) => item.id === itemId)
+          return meta ? `${meta.label}` : itemId
+        })
+        .join(', ')
+    } else {
+      itemsString = request.shortNote?.match(/Items:\s*(.+)/)?.[1] || ''
+    }
+    
+    // Determine category - if not available, infer from urgency or default to FOOD_WATER
+    // Note: HelpRequestResponseDto might not have category field, so we default
+    const category = (request as any).category || HelpRequestCategory.FOOD_WATER
+    
     // Navigate to donation form with request details
     router.push({
       pathname: '/donate',
       query: {
         requestId: request.id,
         userName: requestName,
+        category: category,
         urgency: request.urgency,
-        items: request.shortNote?.match(/Items:\s*(.+)/)?.[1] || '',
+        items: itemsString,
         location: request.approxArea || '',
+        // Pass rationItems as comma-separated string for the donate page
+        rationItems: request.rationItems && request.rationItems.length > 0 
+          ? request.rationItems.join(',')
+          : undefined,
       },
     })
   }
