@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import LanguageSwitcher from './LanguageSwitcher'
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
+import { IHelpRequestSummary } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/IHelpRequestSummary'
 import { Urgency } from '@nx-mono-repo-deployment-test/shared/src/enums'
 import {
   SRI_LANKA_PROVINCES,
@@ -60,6 +61,8 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null)
   const [showIdentifierPrompt, setShowIdentifierPrompt] = useState(true)
   const [helpRequests, setHelpRequests] = useState<HelpRequestResponseDto[]>([])
+  const [summary, setSummary] = useState<IHelpRequestSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [tempFilters, setTempFilters] = useState<{
     province?: string
@@ -123,6 +126,37 @@ export default function LandingPage() {
       }
     }
     loadData()
+  }, [])
+
+  // Load summary statistics from API
+  useEffect(() => {
+    const loadSummary = async () => {
+      setSummaryLoading(true)
+      try {
+        console.log('[LandingPage] Fetching summary from API...')
+        const response = await helpRequestService.getHelpRequestsSummary()
+        console.log('[LandingPage] Summary API response:', JSON.stringify(response, null, 2))
+        console.log('[LandingPage] Response success:', response.success)
+        console.log('[LandingPage] Response data:', response.data)
+        console.log('[LandingPage] Response data type:', typeof response.data)
+        console.log('[LandingPage] Response data keys:', response.data ? Object.keys(response.data) : 'null')
+        
+        if (response.success && response.data) {
+          console.log('[LandingPage] Setting summary data:', response.data)
+          console.log('[LandingPage] Summary total:', response.data.total)
+          console.log('[LandingPage] Summary people:', response.data.people)
+          setSummary(response.data)
+          console.log('[LandingPage] Summary state set successfully')
+        } else {
+          console.error('[LandingPage] Failed to load summary. Success:', response.success, 'Error:', response.error)
+        }
+      } catch (error) {
+        console.error('[LandingPage] Error loading summary:', error)
+      } finally {
+        setSummaryLoading(false)
+      }
+    }
+    loadSummary()
   }, [])
 
   // Use requests as-is (coordinates should come from API)
@@ -362,8 +396,38 @@ export default function LandingPage() {
     return filtered
   }, [requestsWithMockCoords, searchQuery, appliedFilters])
 
-  // Calculate analytics for requests section
+  // Calculate analytics for requests section - use summary API data when available
   const requestsAnalytics = useMemo(() => {
+    console.log('[LandingPage] Calculating analytics. Summary:', summary)
+    console.log('[LandingPage] Summary type:', typeof summary, 'Summary keys:', summary ? Object.keys(summary) : 'null')
+    console.log('[LandingPage] Summary total:', summary?.total)
+    console.log('[LandingPage] Summary people:', summary?.people)
+    
+    // Use summary data from API if available, otherwise calculate from filtered requests
+    if (summary && typeof summary.total === 'number' && summary.people && typeof summary.people.totalPeople === 'number') {
+      console.log('[LandingPage] ✅ Using summary data for analytics')
+      const daysOfSupply = 7
+      const mealsPerPersonPerDay = 3
+      const totalMealsNeeded = (summary.people.totalPeople || 0) * daysOfSupply * mealsPerPersonPerDay
+      
+      // Calculate donations done from closed/completed status
+      const donationsDone = summary.byStatus?.CLOSED || 0
+
+      const analytics = {
+        totalRequests: summary.total || 0,
+        totalPeople: summary.people.totalPeople || 0,
+        totalMealsNeeded,
+        totalKids: summary.people.children || 0,
+        totalElders: summary.people.elders || 0,
+        donationsDone,
+      }
+      console.log('[LandingPage] ✅ Calculated analytics from summary:', analytics)
+      return analytics
+    }
+    
+    console.log('[LandingPage] ⚠️ No summary available, using fallback calculation from filteredRequests. Count:', filteredRequests.length)
+
+    // Fallback: Calculate from filtered requests
     const totalRequests = filteredRequests.length
     const totalPeople = filteredRequests.reduce((sum, req) => {
       // Use real API field first, fallback to parsing shortNote
@@ -427,7 +491,7 @@ export default function LandingPage() {
       donationsDone,
       primaryLocation,
     }
-  }, [filteredRequests])
+  }, [summary, filteredRequests])
 
   const availableDistricts = tempFilters.province
     ? SRI_LANKA_DISTRICTS[tempFilters.province] || []
@@ -646,7 +710,7 @@ export default function LandingPage() {
                       </span>
                     </div>
                     <div className="text-2xl font-bold text-blue-900">
-                      {requestsAnalytics.totalRequests}
+                      {summaryLoading ? '...' : requestsAnalytics.totalRequests}
                     </div>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg">
@@ -655,7 +719,7 @@ export default function LandingPage() {
                       <span className="text-xs font-medium text-green-600">{t('totalPeople')}</span>
                     </div>
                     <div className="text-2xl font-bold text-green-900">
-                      {requestsAnalytics.totalPeople}
+                      {summaryLoading ? '...' : requestsAnalytics.totalPeople}
                     </div>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg">
@@ -666,7 +730,7 @@ export default function LandingPage() {
                       </span>
                     </div>
                     <div className="text-2xl font-bold text-purple-900">
-                      {requestsAnalytics.totalMealsNeeded}
+                      {summaryLoading ? '...' : requestsAnalytics.totalMealsNeeded.toLocaleString()}
                     </div>
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
@@ -675,7 +739,7 @@ export default function LandingPage() {
                       <span className="text-xs font-medium text-orange-600">{t('children')}</span>
                     </div>
                     <div className="text-2xl font-bold text-orange-900">
-                      {requestsAnalytics.totalKids}
+                      {summaryLoading ? '...' : requestsAnalytics.totalKids}
                     </div>
                   </div>
                   <div className="bg-pink-50 p-4 rounded-lg">
@@ -684,7 +748,7 @@ export default function LandingPage() {
                       <span className="text-xs font-medium text-pink-600">{t('elders')}</span>
                     </div>
                     <div className="text-2xl font-bold text-pink-900">
-                      {requestsAnalytics.totalElders}
+                      {summaryLoading ? '...' : requestsAnalytics.totalElders}
                     </div>
                   </div>
                   <div className="bg-teal-50 p-4 rounded-lg">
@@ -695,7 +759,7 @@ export default function LandingPage() {
                       </span>
                     </div>
                     <div className="text-2xl font-bold text-teal-900">
-                      {requestsAnalytics.donationsDone}
+                      {summaryLoading ? '...' : requestsAnalytics.donationsDone}
                     </div>
                   </div>
                 </div>

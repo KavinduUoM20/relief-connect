@@ -13,6 +13,7 @@ const HELP_REQUEST_BASE_PATH = '/help-requests'; // Full path: /api/help-request
  * 
  * Routes:
  * - GET    /api/help-requests/summary - Get comprehensive summary statistics
+ * - GET    /api/help-requests/:id - Get a single help request by ID
  * - GET    /api/help-requests     - Get all help requests (with optional filters)
  * - POST   /api/help-requests     - Create new help request (requires authentication)
  */
@@ -42,10 +43,16 @@ export class HelpRequestRouter extends BaseRouter {
   protected initializeRoutes(): void {
     const controller = this.getHelpRequestController();
 
-    // GET /api/help-requests/summary - Get comprehensive summary statistics
+    // GET /api/help-requests/summary - Get comprehensive summary statistics (must come before /:id)
     this.router.get(
       '/summary',
       controller.getHelpRequestsSummary
+    );
+
+    // GET /api/help-requests/:id - Get a single help request by ID (must come before /)
+    this.router.get(
+      '/:id',
+      controller.getHelpRequestById
     );
 
     // GET /api/help-requests - Get all help requests (with optional filters)
@@ -79,6 +86,7 @@ export class HelpRequestRouter extends BaseRouter {
     // Note: Full paths will be /api/help-requests (api prefix added by RouterManager)
     return [
       { path: `${HELP_REQUEST_BASE_PATH}/summary`, methods: ['GET'] },
+      { path: `${HELP_REQUEST_BASE_PATH}/:id`, methods: ['GET'] },
       { path: HELP_REQUEST_BASE_PATH, methods: ['GET', 'POST'] }
     ];
   }
