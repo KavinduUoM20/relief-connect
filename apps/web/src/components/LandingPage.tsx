@@ -378,10 +378,8 @@ export default function LandingPage() {
         totalKids: summary.people?.children || 0,
         totalElders: summary.people?.elders || 0,
         // totalRations is only used in charts, not the top cards
-        totalRations: Object.values(summary.rationItems || {}).reduce(
-          (sum, count) => sum + (count || 0),
-          0
-        ),
+        // Now calculated on backend - total number of unique ration item types
+        totalRations: summary.totalRationItemTypes || 0,
         donationsDone,
         primaryLocation: 'All Locations',
       }

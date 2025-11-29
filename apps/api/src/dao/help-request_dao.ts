@@ -320,6 +320,7 @@ class HelpRequestDao {
         byDistrict,
         people,
         rationItems,
+        totalRationItemTypes: Object.keys(rationItems).length, // Count of unique ration item types
       };
     } catch (error) {
       console.error('Error in HelpRequestDao.getSummary:', error);

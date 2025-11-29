@@ -34,5 +34,6 @@ export interface IHelpRequestSummary {
   byDistrict: Record<string, number>;
   people: IHelpRequestPeopleSummary;
   rationItems: Record<string, IRationItemInventorySummary>; // Now includes detailed inventory stats
+  totalRationItemTypes: number; // Total number of unique ration item types requested (calculated on backend)
 }
 
