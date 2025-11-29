@@ -124,8 +124,7 @@ export default function MapDashboard() {
   }
 
   const handleViewRequestDetails = (request: HelpRequestResponseDto) => {
-    const requestData = encodeURIComponent(JSON.stringify(request))
-    router.push(`/request-details?requestData=${requestData}`)
+    router.push(`/request/${request.id}`)
   }
 
   const filteredRequests = useMemo(() => {
