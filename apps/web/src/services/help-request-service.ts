@@ -1,6 +1,7 @@
 import apiClient from './api-client';
 import { IApiResponse } from '@nx-mono-repo-deployment-test/shared/src/interfaces';
 import { ICreateHelpRequest } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/ICreateHelpRequest';
+import { IHelpRequestSummary } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/IHelpRequestSummary';
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto';
 import { HelpRequestFilters } from '../types/help-request';
 
@@ -73,6 +74,24 @@ class HelpRequestService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create help request',
+      };
+    }
+  }
+
+  /**
+   * Get summary statistics for help requests (used on landing page cards)
+   */
+  public async getHelpRequestsSummary(): Promise<IApiResponse<IHelpRequestSummary>> {
+    try {
+      const response = await apiClient.get<IApiResponse<IHelpRequestSummary>>(
+        `${this.basePath}/summary`
+      );
+      return response;
+    } catch (error) {
+      console.error('Error in HelpRequestService.getHelpRequestsSummary:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch help requests summary',
       };
     }
   }

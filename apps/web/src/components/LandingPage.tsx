@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import LanguageSwitcher from './LanguageSwitcher'
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
+import { IHelpRequestSummary } from '@nx-mono-repo-deployment-test/shared/src/interfaces/help-request/IHelpRequestSummary'
 import { Urgency } from '@nx-mono-repo-deployment-test/shared/src/enums'
 import {
   SRI_LANKA_PROVINCES,
@@ -60,6 +61,8 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null)
   const [showIdentifierPrompt, setShowIdentifierPrompt] = useState(true)
   const [helpRequests, setHelpRequests] = useState<HelpRequestResponseDto[]>([])
+  const [summary, setSummary] = useState<IHelpRequestSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [tempFilters, setTempFilters] = useState<{
     province?: string
@@ -123,6 +126,26 @@ export default function LandingPage() {
       }
     }
     loadData()
+  }, [])
+
+  // Load summary statistics from API (for Donation Requests cards)
+  useEffect(() => {
+    const loadSummary = async () => {
+      setSummaryLoading(true)
+      try {
+        const response = await helpRequestService.getHelpRequestsSummary()
+        if (response.success && response.data) {
+          setSummary(response.data)
+        } else {
+          console.error('[LandingPage] Failed to load summary:', response.error)
+        }
+      } catch (error) {
+        console.error('[LandingPage] Error loading summary:', error)
+      } finally {
+        setSummaryLoading(false)
+      }
+    }
+    loadSummary()
   }, [])
 
   // Use requests as-is (coordinates should come from API)
@@ -362,8 +385,39 @@ export default function LandingPage() {
     return filtered
   }, [requestsWithMockCoords, searchQuery, appliedFilters])
 
-  // Calculate analytics for requests section
+  // Calculate analytics for requests section - prefer summary API data when available
   const requestsAnalytics = useMemo(() => {
+    // If summary from API is available, use it directly
+    if (summary) {
+      const mealsPerPersonPerDay = 3
+      // Total people should include elders and children as well
+      const totalPeopleFromSummary =
+        (summary.people?.totalPeople || 0) +
+        (summary.people?.elders || 0) +
+        (summary.people?.children || 0)
+
+      // Meals needed PER DAY (not for multiple days)
+      const totalMealsNeeded = totalPeopleFromSummary * mealsPerPersonPerDay
+
+      const donationsDone = summary.byStatus?.CLOSED || 0
+
+      return {
+        totalRequests: summary.total || 0,
+        totalPeople: totalPeopleFromSummary,
+        totalMealsNeeded,
+        totalKids: summary.people?.children || 0,
+        totalElders: summary.people?.elders || 0,
+        // totalRations is only used in charts, not the top cards
+        totalRations: Object.values(summary.rationItems || {}).reduce(
+          (sum, count) => sum + (count || 0),
+          0
+        ),
+        donationsDone,
+        primaryLocation: 'All Locations',
+      }
+    }
+
+    // Fallback: calculate from filtered requests
     const totalRequests = filteredRequests.length
     const totalPeople = filteredRequests.reduce((sum, req) => {
       // Use real API field first, fallback to parsing shortNote
@@ -389,9 +443,9 @@ export default function LandingPage() {
       })())
     }, 0)
 
-    const daysOfSupply = 7
     const mealsPerPersonPerDay = 3
-    const totalMealsNeeded = totalPeople * daysOfSupply * mealsPerPersonPerDay
+    // Meals needed PER DAY (not for multiple days)
+    const totalMealsNeeded = totalPeople * mealsPerPersonPerDay
 
     const totalRations = filteredRequests.reduce((sum, req) => {
       const itemsMatch = req.shortNote?.match(/Items:\s*(.+)/)
@@ -427,7 +481,7 @@ export default function LandingPage() {
       donationsDone,
       primaryLocation,
     }
-  }, [filteredRequests])
+  }, [filteredRequests, summary])
 
   const availableDistricts = tempFilters.province
     ? SRI_LANKA_DISTRICTS[tempFilters.province] || []
