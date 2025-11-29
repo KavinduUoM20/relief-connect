@@ -30,6 +30,7 @@ import {
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
 import { Urgency, HelpRequestCategory } from '@nx-mono-repo-deployment-test/shared/src/enums'
 import { helpRequestService } from '../services'
+import { RATION_ITEMS } from '../components/EmergencyRequestForm'
 
 type RequestType = 'donor' | 'victim'
 
@@ -76,50 +77,71 @@ export default function MyRequestsPage() {
   const [donorRequests, setDonorRequests] = useState<DonorRequest[]>([])
   const [victimRequests, setVictimRequests] = useState<VictimRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingVictimRequests, setLoadingVictimRequests] = useState(false)
 
   // Load donations from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && userInfo) {
-      const allDonations = JSON.parse(
-        localStorage.getItem('donations') || '[]'
-      )
-      const donationStatuses = JSON.parse(
-        localStorage.getItem('donation_statuses') || '{}'
-      )
-      
-      // Filter donations by current user's contact info
-      const userDonations = allDonations
-        .filter((donation: any) => 
-          donation.donorContact === userInfo.identifier ||
-          donation.donorName === userInfo.name ||
-          donation.donorName === userInfo.identifier
-        )
-        .map((donation: any) => {
-          // Try to get request details if available
-          const helpRequests = JSON.parse(
+      const loadDonorRequests = async () => {
+        try {
+          const allDonations = JSON.parse(
+            localStorage.getItem('donations') || '[]'
+          )
+          const donationStatuses = JSON.parse(
+            localStorage.getItem('donation_statuses') || '{}'
+          )
+          
+          // Fetch all help requests from API to get request details
+          const helpRequestsResponse = await helpRequestService.getAllHelpRequests()
+          const allHelpRequests = helpRequestsResponse.success && helpRequestsResponse.data 
+            ? helpRequestsResponse.data 
+            : []
+          
+          // Also check localStorage as fallback
+          const localHelpRequests = JSON.parse(
             localStorage.getItem('help_requests') || '[]'
           )
-          const relatedRequest = helpRequests.find((req: any) => req.id === donation.requestId)
           
-          return {
-            id: donation.id,
-            requestId: donation.requestId || 0,
-            requestTitle: relatedRequest 
-              ? (relatedRequest.name || relatedRequest.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request')
-              : `Request #${donation.requestId || 'Unknown'}`,
-            location: relatedRequest?.approxArea || 'Unknown',
-            category: relatedRequest?.category || HelpRequestCategory.OTHER,
-            urgency: relatedRequest?.urgency || Urgency.MEDIUM,
-            status: (donationStatuses[donation.id] as DonorRequest['status']) || donation.status || 'pending',
-            donatedItems: donation.items || 'Various items',
-            donatedDate: donation.requestedDate || new Date().toISOString().split('T')[0],
-            contact: donation.donorContact,
-            contactType: donation.donorContactType,
-            shortNote: donation.message || '',
-          }
-        })
+          // Filter donations by current user's contact info
+          const userDonations = allDonations
+            .filter((donation: any) => 
+              donation.donorContact === userInfo.identifier ||
+              donation.donorName === userInfo.name ||
+              donation.donorName === userInfo.identifier
+            )
+            .map((donation: any) => {
+              // Try to find request from API response first, then localStorage
+              let relatedRequest = allHelpRequests.find((req: HelpRequestResponseDto) => req.id === donation.requestId)
+              if (!relatedRequest) {
+                relatedRequest = localHelpRequests.find((req: any) => req.id === donation.requestId)
+              }
+              
+              return {
+                id: donation.id,
+                requestId: donation.requestId || 0,
+                requestTitle: relatedRequest 
+                  ? (relatedRequest.name || relatedRequest.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Request')
+                  : `Request #${donation.requestId || 'Unknown'}`,
+                location: relatedRequest?.approxArea || 'Unknown',
+                category: (relatedRequest as any)?.category || HelpRequestCategory.OTHER,
+                urgency: relatedRequest?.urgency || Urgency.MEDIUM,
+                status: (donationStatuses[donation.id] as DonorRequest['status']) || donation.status || 'pending',
+                donatedItems: donation.items || 'Various items',
+                donatedDate: donation.requestedDate || new Date().toISOString().split('T')[0],
+                contact: donation.donorContact,
+                contactType: donation.donorContactType,
+                shortNote: donation.message || '',
+              }
+            })
+          
+          setDonorRequests(userDonations)
+        } catch (error) {
+          console.error('[MyRequestsPage] Error loading donor requests:', error)
+          setDonorRequests([])
+        }
+      }
       
-      setDonorRequests(userDonations)
+      loadDonorRequests()
     }
   }, [userInfo])
 
@@ -156,6 +178,7 @@ export default function MyRequestsPage() {
   useEffect(() => {
     if (userInfo) {
       const loadVictimRequests = async () => {
+        setLoadingVictimRequests(true)
         try {
           const response = await helpRequestService.getAllHelpRequests()
           if (response.success && response.data) {
@@ -168,9 +191,23 @@ export default function MyRequestsPage() {
                   const match = req.shortNote?.match(/People:\s*(\d+)/)
                   return match ? parseInt(match[1]) : 1
                 })()
-                const items = req.rationItems && req.rationItems.length > 0
-                  ? req.rationItems.join(', ')
-                  : req.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
+                
+                // Map rationItems to readable labels using RATION_ITEMS
+                let items = 'Various items'
+                if (req.rationItems && req.rationItems.length > 0) {
+                  const itemLabels = req.rationItems
+                    .map((itemId) => {
+                      const rationItem = RATION_ITEMS.find((item) => item.id === itemId)
+                      return rationItem ? rationItem.label : itemId
+                    })
+                    .filter(Boolean)
+                  items = itemLabels.length > 0 ? itemLabels.join(', ') : 'Various items'
+                } else if (req.shortNote) {
+                  const itemsMatch = req.shortNote.match(/Items:\s*(.+)/)
+                  if (itemsMatch) {
+                    items = itemsMatch[1]
+                  }
+                }
                 
                 return {
                   id: req.id,
@@ -189,16 +226,21 @@ export default function MyRequestsPage() {
               })
             
             setVictimRequests(userHelpRequests)
+          } else {
+            setVictimRequests([])
           }
         } catch (error) {
           console.error('[MyRequestsPage] Error loading victim requests:', error)
           setVictimRequests([])
         } finally {
+          setLoadingVictimRequests(false)
           setLoading(false)
         }
       }
       
       loadVictimRequests()
+    } else {
+      setLoading(false)
     }
   }, [userInfo])
 
@@ -456,7 +498,7 @@ export default function MyRequestsPage() {
           {/* Victim Requests Tab */}
           {activeTab === 'victim' && (
             <div className="space-y-4">
-              {loading ? (
+              {loadingVictimRequests ? (
                     <Card>
                       <CardContent className="py-12 text-center">
                         <p className="text-gray-600">Loading...</p>
