@@ -27,6 +27,7 @@ import {
 import { HelpRequestResponseDto } from '@nx-mono-repo-deployment-test/shared/src/dtos/help-request/response/help_request_response_dto'
 import { Urgency, HelpRequestCategory, ContactType } from '@nx-mono-repo-deployment-test/shared/src/enums'
 import { helpRequestService } from '../../services'
+import { RATION_ITEMS } from '../../components/EmergencyRequestForm'
 
 interface DonationRequest {
   id: number
@@ -41,20 +42,12 @@ interface DonationRequest {
 
 // Donation requests are now loaded from localStorage
 
-// Dummy photos
-const dummyPhotos = [
-  'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop',
-  'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop',
-]
-
 export default function RequestDetailsPage() {
   const router = useRouter()
   const { id } = router.query
   const [request, setRequest] = useState<HelpRequestResponseDto | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [userInfo, setUserInfo] = useState<{ name?: string; identifier?: string } | null>(null)
   const [donationRequests, setDonationRequests] = useState<DonationRequest[]>([])
 
@@ -109,17 +102,25 @@ export default function RequestDetailsPage() {
     if (id) {
       const loadRequest = async () => {
         setLoading(true)
+        setError(null)
         try {
           // Fetch all requests and find the one with matching ID
+          // Note: Backend doesn't have /api/help-requests/:id route, so we fetch all and filter
+          console.log('[RequestPage] Loading request with ID:', id)
           const response = await helpRequestService.getAllHelpRequests()
+          console.log('[RequestPage] Response:', response)
+          
           if (response.success && response.data) {
             const foundRequest = response.data.find((req) => req.id === Number(id))
             if (foundRequest) {
+              console.log('[RequestPage] Found request:', foundRequest)
               setRequest(foundRequest)
             } else {
+              console.log('[RequestPage] Request not found in list')
               setError('Request not found')
             }
           } else {
+            console.error('[RequestPage] API response not successful:', response.error)
             setError(response.error || 'Failed to load request')
           }
         } catch (err) {
@@ -195,15 +196,31 @@ export default function RequestDetailsPage() {
     )
   }
 
-  const name = request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
-  const peopleMatch = request.shortNote?.match(/People:\s*(\d+)/)
-  const peopleCount = peopleMatch ? parseInt(peopleMatch[1]) : 1
-  const kidsMatch = request.shortNote?.match(/Kids:\s*(\d+)/)
-  const kidsCount = kidsMatch ? parseInt(kidsMatch[1]) : 0
-  const eldersMatch = request.shortNote?.match(/Elders:\s*(\d+)/)
-  const eldersCount = eldersMatch ? parseInt(eldersMatch[1]) : 0
-  const itemsMatch = request.shortNote?.match(/Items:\s*(.+)/)
-  const items = itemsMatch ? itemsMatch[1] : 'Various items'
+  // Use real API fields instead of parsing shortNote
+  const name = request.name || request.shortNote?.split(',')[0]?.replace('Name:', '').trim() || 'Anonymous'
+  const peopleCount = request.totalPeople || (() => {
+    const match = request.shortNote?.match(/People:\s*(\d+)/)
+    return match ? parseInt(match[1]) : 1
+  })()
+  const kidsCount = request.children || (() => {
+    const match = request.shortNote?.match(/Kids:\s*(\d+)/)
+    return match ? parseInt(match[1]) : 0
+  })()
+  const eldersCount = request.elders || (() => {
+    const match = request.shortNote?.match(/Elders:\s*(\d+)/)
+    return match ? parseInt(match[1]) : 0
+  })()
+  
+  // Use rationItems array if available, otherwise parse from shortNote
+  const items = request.rationItems && request.rationItems.length > 0
+    ? request.rationItems.map((itemId) => {
+        const meta = RATION_ITEMS.find((item) => item.id === itemId)
+        return meta ? `${meta.icon} ${meta.label}` : itemId
+      }).join(', ')
+    : request.shortNote?.match(/Items:\s*(.+)/)?.[1] || 'Various items'
+  
+  const peopleCountNumber = Number(peopleCount) || 0
+  const requestType = peopleCountNumber <= 1 ? 'Individual' : 'Group'
 
   return (
     <>
@@ -227,116 +244,125 @@ export default function RequestDetailsPage() {
         </div>
 
         <div className="container mx-auto px-4 py-6 max-w-4xl">
-          {/* Photos Section */}
-          <Card className="mb-6">
-            <CardContent className="p-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2">
-                {dummyPhotos.map((photo, index) => (
-                  <div
-                    key={index}
-                    className="relative aspect-video cursor-pointer overflow-hidden rounded-lg group"
-                    onClick={() => setSelectedPhoto(photo)}
-                  >
-                    <img
-                      src={photo}
-                      alt={`Request photo ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Photo Modal */}
-          {selectedPhoto && (
-            <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-              <DialogContent className="max-w-4xl p-0">
-                <img
-                  src={selectedPhoto}
-                  alt="Request photo"
-                  className="w-full h-auto max-h-[80vh] object-contain"
-                />
-              </DialogContent>
-            </Dialog>
-          )}
-
-          {/* Details Section */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-2xl font-bold mb-2">{name}</CardTitle>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span>{request.approxArea || 'Unknown location'}</span>
+          {/* Details Section - Matching Homepage Card Style */}
+          <Card className="mb-6 shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {/* Header with name and urgency */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-2xl font-bold text-gray-900">
+                        {name}
+                      </CardTitle>
+                      <div
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          request.urgency === Urgency.HIGH
+                            ? 'bg-red-100 text-red-700'
+                            : request.urgency === Urgency.MEDIUM
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {request.urgency || 'Medium'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
+                        {requestType}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    request.urgency === Urgency.HIGH
-                      ? 'bg-red-100 text-red-700'
-                      : request.urgency === Urgency.MEDIUM
-                        ? 'bg-orange-100 text-orange-700'
-                        : 'bg-green-100 text-green-700'
-                  }`}
-                >
-                  {request.urgency || 'Medium'}
+
+                {/* Location (clickable link to Google Maps) */}
+                <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
+                  <MapPin className="h-4 w-4 text-red-500 flex-shrink-0" />
+                  <div className="flex flex-col flex-1 min-w-0">
+                    {request.lat != null && request.lng != null ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${encodeURIComponent(
+                          `${Number(request.lat)},${Number(request.lng)}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-blue-600 hover:underline truncate"
+                      >
+                        {request.approxArea ||
+                          `${Number(request.lat).toFixed(6)}, ${Number(request.lng).toFixed(6)}`}
+                      </a>
+                    ) : (
+                      <span className="font-medium truncate">
+                        {request.approxArea || 'Unknown location'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* People Info */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <span className="font-semibold">{peopleCount} people</span>
+
+                {/* People Details */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-blue-50 rounded-lg p-3 text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="text-lg font-bold text-blue-700">{peopleCount}</div>
+                    <div className="text-xs text-gray-600">People</div>
+                  </div>
+                  {Number(kidsCount) > 0 && (
+                    <div className="bg-purple-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Users className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div className="text-lg font-bold text-purple-700">{kidsCount}</div>
+                      <div className="text-xs text-gray-600">Kids</div>
+                    </div>
+                  )}
+                  {Number(eldersCount) > 0 && (
+                    <div className="bg-orange-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Users className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <div className="text-lg font-bold text-orange-700">
+                        {eldersCount}
+                      </div>
+                      <div className="text-xs text-gray-600">Elders</div>
+                    </div>
+                  )}
                 </div>
-                {kidsCount > 0 && (
-                  <span className="text-sm text-gray-600">({kidsCount} kids)</span>
+
+                {/* Items Needed */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-100">
+                  <div className="flex items-start gap-2">
+                    <Package className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-purple-700 mb-1">
+                        Items Needed
+                      </div>
+                      <div className="text-sm text-gray-700">{items}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                <div className="flex items-center gap-2 text-sm text-gray-600 pt-2 border-t border-gray-200">
+                  {request.contactType === 'Phone' ? (
+                    <Phone className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Mail className="h-4 w-4 text-blue-600" />
+                  )}
+                  <span className="font-medium">{request.contact}</span>
+                </div>
+
+                {/* Full Details */}
+                {request.shortNote && (
+                  <div className="pt-4 border-t">
+                    <h3 className="font-semibold mb-2 text-sm text-gray-700">Additional Details</h3>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {request.shortNote}
+                    </p>
+                  </div>
                 )}
-                {eldersCount > 0 && (
-                  <span className="text-sm text-gray-600">({eldersCount} elders)</span>
-                )}
               </div>
-
-              {/* Items Needed */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="h-5 w-5 text-purple-600" />
-                  <span className="font-semibold">Items Needed</span>
-                </div>
-                <p className="text-gray-700 ml-7">{items}</p>
-              </div>
-
-
-              {/* Contact Info */}
-              <div className="flex items-center gap-2">
-                {request.contactType === 'Phone' ? (
-                  <Phone className="h-4 w-4 text-gray-600" />
-                ) : (
-                  <Mail className="h-4 w-4 text-gray-600" />
-                )}
-                <span className="text-sm text-gray-600">{request.contactType}:</span>
-                <span className="text-gray-900 font-medium">{request.contact}</span>
-              </div>
-
-              {/* Full Details */}
-              <div className="pt-4 border-t">
-                <h3 className="font-semibold mb-2">Full Details</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {request.shortNote || 'No additional details provided.'}
-                </p>
-              </div>
-
-              {/* Coordinates */}
-              {request.lat != null && request.lng != null && (
-                <div className="text-sm text-gray-600">
-                  <span className="font-semibold">Coordinates:</span> Lat:{' '}
-                  {Number(request.lat).toFixed(4)}, Lng: {Number(request.lng).toFixed(4)}
-                </div>
-              )}
             </CardContent>
           </Card>
 
